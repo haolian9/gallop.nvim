@@ -16,7 +16,7 @@ an opinionated, crude jump motion implementation
 * `require'gallop.setup'()` # necessary setup
 * `require'gallop'(3)` # it will ask you 3 chars to find targets, then ask you a label where to move cursor to
 
-## how does it implemented
+## how is it implemented
 * use tty.read_chars() to get user input without changing cursor position
 * use vim.regex() to find targets
 * use nvim_buf_set_extmark() to show labels

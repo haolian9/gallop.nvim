@@ -36,11 +36,10 @@ do
   local list = {}
   do
     local str = table.concat({
-      "asdfjkl;" .. "gh" .. "wertyuiop" .. "zxcvbnm",
+      "asdfjkl;" .. "gh" .. "qwertyuiop" .. "zxcvbnm",
       ",./'[" .. "]1234567890-=",
       "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM",
     }, "")
-    assert(not string.find(str, "q", 1, true), "q is reserved")
     for i = 1, #str do
       table.insert(list, string.sub(str, i, i))
     end
