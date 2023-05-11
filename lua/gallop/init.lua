@@ -55,7 +55,7 @@ do
   function Labels.iter() return fn.iterate(list) end
 end
 
-local ns = api.nvim_create_namespace("sss")
+local ns = api.nvim_create_namespace("gallop")
 -- for advancing the offset if the rest of a line starts with these chars
 local advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
 
