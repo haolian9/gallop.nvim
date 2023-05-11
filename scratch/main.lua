@@ -1,3 +1,9 @@
+-- features:
+-- todo: zf powered fuzzy-matching
+-- todo: sn, sp
+-- todo: sj, sk
+-- todo: properly in-time redraw
+
 local tty = require("infra.tty")
 local unsafe = require("infra.unsafe")
 local fn = require("infra.fn")
@@ -17,11 +23,10 @@ local api = vim.api
 
 local chars
 do
-  local n = 2
-  chars = tty.read_chars(n)
+  -- todo: tell user what's going on
+  chars = tty.read_chars(5)
   if chars == nil then error("canceled") end
 end
-print(chars)
 
 -- const's
 local ns = api.nvim_create_namespace("sss")
@@ -29,7 +34,6 @@ local ns = api.nvim_create_namespace("sss")
 local win_id = api.nvim_get_current_win()
 local bufnr = api.nvim_win_get_buf(win_id)
 
--- todo: zf powered fuzzy-matching
 -- todo: consider utf-8 chars
 local target_matcher = vim.regex([[\<]] .. chars)
 -- for advancing the offset if the rest of a line starts with these chars
@@ -37,7 +41,6 @@ local advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
 
 api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
 
--- todo: cursor-coordinated visible region: sj, sk
 local visible_region = {}
 do
   assert(not vim.wo[win_id].wrap, "not supported yet")
@@ -62,7 +65,7 @@ do
 
   do
     -- stylua: ignore
-    local fmt = "leftcol=%d, topline=%d, botline=%d, width=%d, textoff=%d"
+    local fmt = "leftcol=%d, topline=%d, botline=%d, width=%d, textoff=%d, "
       .. "region_start=line=%d,col=%d, region_stop=line=%d,col=%d"
     local args = {
       leftcol,
@@ -79,16 +82,15 @@ do
   end
 end
 
-do -- highlight matches
+---@type {lnum: number, col_start: number, col_stop: number}[]
+local matches = {}
+do -- collect matches
   -- todo: ignore comments and string literals
 
-  -- todo: use for sn, sp
-  ---@type {[number]: number[]}
-  local matches = {}
   local lineslen = unsafe.lineslen(bufnr, fn.range(visible_region.start_line, visible_region.stop_line))
 
   for lnum = visible_region.start_line, visible_region.stop_line - 1 do
-    matches[lnum] = {}
+    -- todo: optimize out
     local offset = visible_region.start_col
     local eol = math.min(visible_region.stop_col, lineslen[lnum])
     while offset < eol do
@@ -108,9 +110,61 @@ do -- highlight matches
         end
         assert(offset >= col_stop)
       end
-      api.nvim_buf_add_highlight(bufnr, ns, "Search", lnum, col_start, col_stop)
-      table.insert(matches[lnum], col_start)
-      table.insert(matches[lnum], col_stop)
+      table.insert(matches, { lnum = lnum, col_start = col_start, col_stop = col_stop })
     end
   end
+  vim.notify(string.format("total matches: %d", #matches))
+end
+
+if false then -- highlight matches
+  for _, m in ipairs(matches) do
+    api.nvim_buf_add_highlight(bufnr, ns, "Search", m.lnum, m.col_start, m.col_stop)
+  end
+end
+
+local Labels = {}
+do
+  local list = {}
+  do
+    local str = "asdfjkl;" .. "gh" .. "wertyuiop" .. "zxcvbnm" .. ",./'["
+    assert(not string.find(str, "q", 1, true), "q is reserved")
+    for i = 1, #str do
+      table.insert(list, string.sub(str, i, i))
+    end
+  end
+
+  function Labels.as_index(label)
+    for k, v in pairs(list) do
+      if v == label then return k end
+    end
+  end
+
+  function Labels.iter() return fn.iterate(list) end
+end
+
+-- todo: shortcut: there is only one label
+
+do -- label matches
+  local label_iter = Labels.iter()
+  for _, m in ipairs(matches) do
+    local label = label_iter()
+    if label == nil then break end
+    api.nvim_buf_set_extmark(bufnr, ns, m.lnum, m.col_start, {
+      virt_text = { { label, "Search" } },
+      virt_text_pos = "overlay",
+    })
+  end
+end
+
+do
+  vim.cmd.redraw()
+  local m
+  do
+    -- todo: tell user what's going on
+    local label = tty.read_chars(1)
+    local index = assert(Labels.as_index(label))
+    m = assert(matches[index])
+  end
+  api.nvim_win_set_cursor(win_id, { m.lnum + 1, m.col_start })
+  api.nvim_buf_clear_namespace(bufnr, ns, visible_region.start_col, visible_region.stop_line)
 end
