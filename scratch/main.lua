@@ -1,7 +1,5 @@
 -- features:
 -- todo: zf powered fuzzy-matching
--- todo: sn, sp
--- todo: sj, sk
 -- todo: properly in-time redraw
 
 local tty = require("infra.tty")
@@ -23,10 +21,11 @@ local api = vim.api
 
 local chars
 do
-  -- todo: tell user what's going on
   chars = tty.read_chars(5)
   if chars == nil then error("canceled") end
 end
+
+api.nvim_set_hl(0, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
 
 -- const's
 local ns = api.nvim_create_namespace("sss")
@@ -65,8 +64,7 @@ do
 
   do
     -- stylua: ignore
-    local fmt = "leftcol=%d, topline=%d, botline=%d, width=%d, textoff=%d, "
-      .. "region_start=line=%d,col=%d, region_stop=line=%d,col=%d"
+    local fmt = "leftcol=%d, topline=%d, botline=%d, width=%d, textoff=%d, region_start=line=%d,col=%d, region_stop=line=%d,col=%d"
     local args = {
       leftcol,
       topline,
@@ -90,7 +88,6 @@ do -- collect matches
   local lineslen = unsafe.lineslen(bufnr, fn.range(visible_region.start_line, visible_region.stop_line))
 
   for lnum = visible_region.start_line, visible_region.stop_line - 1 do
-    -- todo: optimize out
     local offset = visible_region.start_col
     local eol = math.min(visible_region.stop_col, lineslen[lnum])
     while offset < eol do
@@ -126,7 +123,11 @@ local Labels = {}
 do
   local list = {}
   do
-    local str = "asdfjkl;" .. "gh" .. "wertyuiop" .. "zxcvbnm" .. ",./'["
+    local str = table.concat({
+      "asdfjkl;" .. "gh" .. "wertyuiop" .. "zxcvbnm",
+      ",./'[" .. "]1234567890-=",
+      "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM",
+    }, "")
     assert(not string.find(str, "q", 1, true), "q is reserved")
     for i = 1, #str do
       table.insert(list, string.sub(str, i, i))
@@ -150,7 +151,7 @@ do -- label matches
     local label = label_iter()
     if label == nil then break end
     api.nvim_buf_set_extmark(bufnr, ns, m.lnum, m.col_start, {
-      virt_text = { { label, "Search" } },
+      virt_text = { { label, "GallopStop" } },
       virt_text_pos = "overlay",
     })
   end
@@ -160,7 +161,6 @@ do
   vim.cmd.redraw()
   local m
   do
-    -- todo: tell user what's going on
     local label = tty.read_chars(1)
     local index = assert(Labels.as_index(label))
     m = assert(matches[index])
