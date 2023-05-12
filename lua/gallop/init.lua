@@ -1,7 +1,11 @@
--- features:
--- todo: zf powered fuzzy-matching
--- todo: consider utf-8 chars
--- todo: ignore comments and string literals
+-- design choices
+-- * only for the the visible region of currently window
+-- * every label a printable ascii char
+-- * when there is no enough labels, targets will be discarded
+-- * be minimal: no callback, no back-forth
+-- * opininated pattern for targets
+-- * no exclude comments and string literals
+--
 
 local tty = require("infra.tty")
 local unsafe = require("infra.unsafe")
@@ -34,6 +38,7 @@ local api = vim.api
 local Labels = {}
 do
   local list = {}
+  local dict = {}
   do
     local str = table.concat({
       "asdfjkl;" .. "gh" .. "qwertyuiop" .. "zxcvbnm",
@@ -41,16 +46,13 @@ do
       "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM",
     }, "")
     for i = 1, #str do
-      table.insert(list, string.sub(str, i, i))
+      local char = string.sub(str, i, i)
+      list[i] = char
+      dict[char] = i
     end
   end
 
-  function Labels.as_index(label)
-    for k, v in pairs(list) do
-      if v == label then return k end
-    end
-  end
-
+  function Labels.index(label) return dict[label] end
   function Labels.iter() return fn.iterate(list) end
 end
 
@@ -149,7 +151,14 @@ return function(nchar)
   do
     local chars = tty.read_chars(nchar)
     if #chars == 0 then return jelly.debug("canceled") end
-    target_matcher = vim.regex([[\<]] .. chars)
+    -- behave like &smartcase
+    local pattern
+    if string.find(chars, "%u") then
+      pattern = [[\C\<]] .. chars
+    else
+      pattern = [[\c\<]] .. chars
+    end
+    target_matcher = vim.regex(pattern)
   end
 
   local visible_region = resolve_visible_region(win_id)
@@ -161,10 +170,18 @@ return function(nchar)
   place_labels(bufnr, targets)
   vim.cmd.redraw()
 
-  local choice = tty.read_chars(1)
-  if #choice == 0 then return clear_labels(bufnr, visible_region) end
-
-  local target = assert(targets[Labels.as_index(choice)])
-  goto_target(win_id, target)
+  local ok, err = pcall(function()
+    local target
+    do
+      local chosen_label = tty.read_chars(1)
+      if #chosen_label == 0 then return jelly.info("chose no label") end
+      local target_index = Labels.index(chosen_label)
+      if target_index == nil then return jelly.warn("unknown label: %s", chosen_label) end
+      target = targets[target_index]
+      if target == nil then return jelly.warn("chosen label has no corresponding target") end
+    end
+    goto_target(win_id, target)
+  end)
   clear_labels(bufnr, visible_region)
+  if not ok then error(err) end
 end
