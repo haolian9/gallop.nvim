@@ -1,26 +1,26 @@
+-- about the name
+--
+-- whoa. nice car, man.
+-- yeah. it gets me from A to B.
+--
+-- oh, darn. all this horsepower and no room to gallop.
+--
+
 -- design choices
 -- * only for the the visible region of currently window
 -- * every label a printable ascii char
 -- * when there is no enough labels, targets will be discarded
 -- * be minimal: no callback, no back-forth
 -- * opininated pattern for targets
--- * no exclude comments and string literals
+-- * no excluding comments and string literals
+-- * no cache
 --
 
 local tty = require("infra.tty")
 local unsafe = require("infra.unsafe")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
-
----@class gallop.WinInfo
----@field botline number
----@field topline number
----@field height  number
----@field width   number
----@field textoff number
----@field winbar  number
----@field wincol  number
----@field winrow  number
+local ex = require("infra.ex")
 
 ---@class gallop.VisibleRegion
 ---@field start_line number 0-indexed, inclusive
@@ -29,9 +29,9 @@ local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
 ---@field stop_col   number 0-indexed, exclusive
 
 ---@class gallop.Target
----@field lnum number 0-indexed
+---@field lnum      number 0-indexed
 ---@field col_start number 0-indexed, inclusive
----@field col_stop number 0-indexed, exclusive
+---@field col_stop  number 0-indexed, exclusive
 
 local api = vim.api
 
@@ -57,19 +57,21 @@ do
 end
 
 local ns = api.nvim_create_namespace("gallop")
+-- todo: nvim bug: nvim_set_hl(0) vs `hi clear`; see https://github.com/neovim/neovim/issues/23589
+api.nvim_set_hl(ns, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
+
 -- for advancing the offset if the rest of a line starts with these chars
 local advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
 
----@param win_id any
+---@param winid any
 ---@return gallop.VisibleRegion
-local function resolve_visible_region(win_id)
-  assert(not vim.wo[win_id].wrap, "not supported yet")
+local function resolve_visible_region(winid)
+  assert(not vim.wo[winid].wrap, "not supported yet")
 
   local region = {}
 
-  ---@type gallop.WinInfo
-  local wininfo = assert(vim.fn.getwininfo(win_id)[1])
-  local leftcol = api.nvim_win_call(win_id, vim.fn.winsaveview).leftcol
+  local wininfo = assert(vim.fn.getwininfo(winid)[1])
+  local leftcol = api.nvim_win_call(winid, vim.fn.winsaveview).leftcol
   local topline = wininfo.topline - 1
   local botline = wininfo.botline - 1
 
@@ -83,7 +85,7 @@ end
 
 ---@param bufnr number
 ---@param visible_region gallop.VisibleRegion
----@param target_matcher Regex
+---@param target_matcher vim.Regex
 ---@return gallop.Target[]
 local function collect_targets(bufnr, visible_region, target_matcher)
   local targets = {}
@@ -116,16 +118,16 @@ local function collect_targets(bufnr, visible_region, target_matcher)
   return targets
 end
 
+---@param winid number
 ---@param bufnr number
 ---@param targets gallop.Target[]
-local function place_labels(bufnr, targets)
+local function place_labels(winid, bufnr, targets)
+  api.nvim_win_set_hl_ns(winid, ns)
+
   local label_iter = Labels.iter()
   for k, m in ipairs(targets) do
     local label = label_iter()
-    if label == nil then
-      jelly.warn("ran out of labels: %d", #targets - k)
-      break
-    end
+    if label == nil then return jelly.warn("ran out of labels: %d", #targets - k) end
     api.nvim_buf_set_extmark(bufnr, ns, m.lnum, m.col_start, {
       virt_text = { { label, "GallopStop" } },
       virt_text_pos = "overlay",
@@ -133,24 +135,29 @@ local function place_labels(bufnr, targets)
   end
 end
 
+---@param winid number
 ---@param bufnr number
 ---@param region gallop.VisibleRegion
-local function clear_labels(bufnr, region) api.nvim_buf_clear_namespace(bufnr, ns, region.start_col, region.stop_line) end
+local function clear_labels(winid, bufnr, region)
+  api.nvim_win_set_hl_ns(winid, 0)
+  api.nvim_buf_clear_namespace(bufnr, ns, region.start_col, region.stop_line)
+end
 
----@param win_id number
+---@param winid number
 ---@param target gallop.Target
-local function goto_target(win_id, target) api.nvim_win_set_cursor(win_id, { target.lnum + 1, target.col_start }) end
+local function goto_target(winid, target) api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start }) end
 
-return function(nchar)
+---@param nchar? number read >=n chars from user
+---@param chars? string ascii chars
+---@return string? chars used for the search if no error occurs
+return function(nchar, chars)
   nchar = nchar or 2
 
-  local win_id = api.nvim_get_current_win()
-  local bufnr = api.nvim_win_get_buf(win_id)
+  if chars == nil then chars = tty.read_chars(nchar) end
+  if #chars == 0 then return jelly.debug("canceled") end
 
   local target_matcher
   do
-    local chars = tty.read_chars(nchar)
-    if #chars == 0 then return jelly.debug("canceled") end
     -- behave like &smartcase
     local pattern
     if string.find(chars, "%u") then
@@ -161,14 +168,17 @@ return function(nchar)
     target_matcher = vim.regex(pattern)
   end
 
-  local visible_region = resolve_visible_region(win_id)
+  local winid = api.nvim_get_current_win()
+  local bufnr = api.nvim_win_get_buf(winid)
+
+  local visible_region = resolve_visible_region(winid)
   local targets = collect_targets(bufnr, visible_region, target_matcher)
 
   if #targets == 0 then return jelly.debug("no target found") end
-  if #targets == 1 then return goto_target(win_id, targets[1]) end
+  if #targets == 1 then return goto_target(winid, targets[1]) end
 
-  place_labels(bufnr, targets)
-  vim.cmd.redraw()
+  place_labels(winid, bufnr, targets)
+  ex("redraw")
 
   local ok, err = pcall(function()
     local target
@@ -180,8 +190,10 @@ return function(nchar)
       target = targets[target_index]
       if target == nil then return jelly.warn("chosen label has no corresponding target") end
     end
-    goto_target(win_id, target)
+    goto_target(winid, target)
   end)
-  clear_labels(bufnr, visible_region)
+  clear_labels(winid, bufnr, visible_region)
   if not ok then error(err) end
+
+  return chars
 end
