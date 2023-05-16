@@ -1,5 +1,7 @@
 an opinionated, crude jump motion implementation
 
+https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8ac9-8066b6274f63.mp4
+
 ## design choices
 * only for the the visible region of currently window
 * every label is a printable ascii char
