@@ -17,9 +17,20 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 * haolian9/infra.nvim
 
 ## usage
-* `require'gallop.setup'()` # necessary setup
-* `require'gallop'(3)` # ask user 3 chars to match
-* `require'gallop'(nil, 'hello')'` # use given chars to match
+* take a look at `require'gallop'()`
+* my personal seting
+
+```
+do
+  local last_chars
+  nmap("s", function() last_chars = require("gallop")(2, last_chars) or last_chars end)
+  nmap("S", function()
+    if last_chars == nil then return jelly.warn("no previous search") end
+    require("gallop")(nil, last_chars)
+  end)
+end
+```
+
 
 ## how does it work
 * use vim.regex() to find targets
