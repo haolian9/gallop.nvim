@@ -13,6 +13,8 @@ local unsafe = require("infra.unsafe")
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("gallop.statemachine", vim.log.levels.DEBUG)
 local ex = require("infra.ex")
+local prefer = require("infra.prefer")
+local jumplist = require("infra.jumplist")
 
 local facts = require("gallop.facts")
 
@@ -32,7 +34,7 @@ local api = vim.api
 ---@param winid any
 ---@return gallop.VisibleRegion
 local function resolve_visible_region(winid)
-  assert(not vim.wo[winid].wrap, "not supported yet")
+  assert(not prefer.wo(winid, "wrap"), "not supported yet")
 
   local region = {}
 
@@ -124,7 +126,15 @@ end
 
 ---@param winid number
 ---@param target gallop.Target
-local function goto_target(winid, target) api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start }) end
+local function goto_target(winid, target)
+  do
+    local row, col = unpack(api.nvim_win_get_cursor(winid))
+    if target.lnum + 1 == row and target.col_start == col then return end
+  end
+
+  jumplist.push_here()
+  api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start })
+end
 
 ---@param chars string @ascii characters
 return function(chars)
@@ -155,7 +165,6 @@ return function(chars)
   local ok, err = pcall(function()
     -- keep asking user for a valid label
     while true do
-      -- todo: reuse this tty fd
       local chosen_label = tty.read_chars(1)
       if #chosen_label == 0 then return jelly.info("chose no label") end
       local target = label_to_target(targets, chosen_label)
