@@ -1,15 +1,23 @@
-an opinionated, crude jump motion implementation
+an opinionated, crude-made jump motion implementation
 
 https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8ac9-8066b6274f63.mp4
 
 ## design choices
-* only for the the visible region of currently window
-* every label is a printable ascii char
-* when there is no enough labels, targets will be discarded
+* only for the viewport of currently window
+* every label is one printable ascii char
+* when there are no enough labels, targets will be discarded
 * be minimal: no callback, no back-forth
 * opininated pattern for targets
 * no excluding comments and string literals
 * no cache
+
+## limits, UB
+* it does not work in neovide/nvim-qt due to tty:read()
+* using it on a &foldenable window is an 'undefined behavior'
+
+## status
+* it just works on my machine (tm)
+* feature freezed
 
 ## prerequisites
 * linux
@@ -30,8 +38,3 @@ do
   end)
 end
 ```
-
-
-## how does it work
-* use vim.regex() to find targets
-* use nvim_buf_set_extmark() to show labels

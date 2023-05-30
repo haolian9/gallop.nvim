@@ -6,6 +6,12 @@
 -- oh, darn. all this horsepower and no room to gallop.
 --
 
+-- known limits
+-- * not work in a gui frontend of neovim due to tty:read()
+--
+-- undefined behaviors
+-- * &foldenabled
+
 local tty = require("infra.tty")
 
 local statemachine = require("gallop.statemachine")
@@ -24,7 +30,7 @@ return function(nchar, spare_chars)
   local chars
   do
     if nchar ~= nil then
-      chars = tty.read_chars(2)
+      chars = tty.read_chars(nchar)
       if #chars == 0 and spare_chars ~= nil then chars = spare_chars end
     else
       if spare_chars ~= nil then

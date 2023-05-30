@@ -21,7 +21,7 @@ do
   end
 
   function M.labels.index(label) return dict[label] end
-  function M.labels.iter() return fn.iterate(list) end
+  function M.labels.iter() return fn.iter(list) end
 end
 
 do

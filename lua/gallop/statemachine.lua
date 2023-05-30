@@ -18,7 +18,7 @@ local jumplist = require("infra.jumplist")
 
 local facts = require("gallop.facts")
 
----@class gallop.VisibleRegion
+---@class gallop.Viewport
 ---@field start_line number 0-indexed, inclusive
 ---@field start_col  number 0-indexed, inclusive
 ---@field stop_line  number 0-indexed, exclusive
@@ -32,36 +32,36 @@ local facts = require("gallop.facts")
 local api = vim.api
 
 ---@param winid any
----@return gallop.VisibleRegion
-local function resolve_visible_region(winid)
+---@return gallop.Viewport
+local function resolve_viewport(winid)
   assert(not prefer.wo(winid, "wrap"), "not supported yet")
 
-  local region = {}
+  local viewport = {}
 
   local wininfo = assert(vim.fn.getwininfo(winid)[1])
   local leftcol = api.nvim_win_call(winid, vim.fn.winsaveview).leftcol
   local topline = wininfo.topline - 1
   local botline = wininfo.botline - 1
 
-  region.start_line = topline
-  region.start_col = leftcol
-  region.stop_line = botline + 1
-  region.stop_col = leftcol + (wininfo.width - wininfo.textoff)
+  viewport.start_line = topline
+  viewport.start_col = leftcol
+  viewport.stop_line = botline + 1
+  viewport.stop_col = leftcol + (wininfo.width - wininfo.textoff)
 
-  return region
+  return viewport
 end
 
 ---@param bufnr number
----@param visible_region gallop.VisibleRegion
+---@param viewport gallop.Viewport
 ---@param target_matcher vim.Regex
 ---@return gallop.Target[]
-local function collect_targets(bufnr, visible_region, target_matcher)
+local function collect_targets(bufnr, viewport, target_matcher)
   local targets = {}
-  local lineslen = unsafe.lineslen(bufnr, fn.range(visible_region.start_line, visible_region.stop_line))
+  local lineslen = unsafe.lineslen(bufnr, fn.range(viewport.start_line, viewport.stop_line))
 
-  for lnum = visible_region.start_line, visible_region.stop_line - 1 do
-    local offset = visible_region.start_col
-    local eol = math.min(visible_region.stop_col, lineslen[lnum])
+  for lnum = viewport.start_line, viewport.stop_line - 1 do
+    local offset = viewport.start_col
+    local eol = math.min(viewport.stop_col, lineslen[lnum])
     while offset < eol do
       local col_start, col_stop
       do -- match next target
@@ -105,10 +105,10 @@ end
 
 ---@param winid number
 ---@param bufnr number
----@param region gallop.VisibleRegion
-local function clear_labels(winid, bufnr, region)
+---@param viewport gallop.Viewport
+local function clear_labels(winid, bufnr, viewport)
   api.nvim_win_set_hl_ns(winid, 0)
-  api.nvim_buf_clear_namespace(bufnr, facts.ns, region.start_col, region.stop_line)
+  api.nvim_buf_clear_namespace(bufnr, facts.ns, viewport.start_col, viewport.stop_line)
 end
 
 ---@param targets gallop.Target[]
@@ -133,6 +133,7 @@ local function goto_target(winid, target)
   end
 
   jumplist.push_here()
+
   api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start })
 end
 
@@ -153,8 +154,8 @@ return function(chars)
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_win_get_buf(winid)
 
-  local visible_region = resolve_visible_region(winid)
-  local targets = collect_targets(bufnr, visible_region, target_matcher)
+  local viewport = resolve_viewport(winid)
+  local targets = collect_targets(bufnr, viewport, target_matcher)
 
   if #targets == 0 then return jelly.debug("no target found") end
   if #targets == 1 then return goto_target(winid, targets[1]) end
@@ -172,6 +173,6 @@ return function(chars)
       if target ~= nil then return goto_target(winid, target) end
     end
   end)
-  clear_labels(winid, bufnr, visible_region)
+  clear_labels(winid, bufnr, viewport)
   if not ok then error(err) end
 end
