@@ -5,15 +5,16 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 ## design choices
 * only for the viewport of currently window
 * every label is one printable ascii char
-* when there are no enough labels, targets will be discarded
-* be minimal: no callback, no back-forth
-* opininated pattern for targets
+* when there are not enough labels, targets will be discarded silently
+* be minimal: no callback, no back-forth, no {treesitter,lsp}-backed
 * no excluding comments and string literals
+* opininated pattern for targets
 * no cache
+* respect jumplist
 
-## limits, UB
+## limits, undefined behaviors
 * it does not work in neovide/nvim-qt due to tty:read()
-* using it on a &foldenable window is an 'undefined behavior'
+* using it on a &foldenable window is an UB
 
 ## status
 * it just works on my machine (tm)
@@ -26,15 +27,17 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 
 ## usage
 * take a look at `require'gallop'()`
-* my personal seting
+* here's my personal setting
 
 ```
 do
   local last_chars
-  nmap("s", function() last_chars = require("gallop")(2, last_chars) or last_chars end)
-  nmap("S", function()
+  local function gallop() last_chars = require("gallop")(2, last_chars) or last_chars end
+  local function replay()
     if last_chars == nil then return jelly.warn("no previous search") end
     require("gallop")(nil, last_chars)
-  end)
+  end
+  m({ "n", "v" }, "s", gallop)
+  m({ "n", "v" }, "S", replay)
 end
 ```
