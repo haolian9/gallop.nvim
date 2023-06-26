@@ -34,7 +34,7 @@ local api = vim.api
 ---@param winid any
 ---@return gallop.Viewport
 local function resolve_viewport(winid)
-  assert(not prefer.wo(winid, "wrap"), "not supported yet")
+  assert(not prefer.wo(winid, "wrap"), "no support for &wrap yet")
 
   local viewport = {}
 
