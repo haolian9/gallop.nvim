@@ -30,7 +30,4 @@ do
   api.nvim_set_hl(M.ns, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
 end
 
--- for advancing the offset if the rest of a line starts with these chars
-M.advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
-
 return M

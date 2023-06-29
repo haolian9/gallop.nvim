@@ -12,10 +12,13 @@
 -- undefined behaviors
 -- * &foldenabled
 
+local M = {}
+
+local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
 local tty = require("infra.tty")
 
 local statemachine = require("gallop.statemachine")
-local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
+local target_collectors = require("gallop.target_collectors")
 
 --usecases
 --* (3,   nil) ask 3 chars, if it's been canceled, exit
@@ -26,7 +29,7 @@ local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
 ---@param nchar? number @nil=2
 ---@param spare_chars? string @ascii chars
 ---@return string? chars @nil if error occurs
-return function(nchar, spare_chars)
+function M.words(nchar, spare_chars)
   local chars
   do
     if nchar ~= nil then
@@ -42,7 +45,15 @@ return function(nchar, spare_chars)
     if #chars == 0 then return jelly.debug("canceled") end
   end
 
-  statemachine(chars)
+  ---@diagnostic disable-next-line: unused-local
+  statemachine(function(winid, bufnr, viewport) return target_collectors.word_head(bufnr, viewport, chars) end)
 
   return chars
 end
+
+function M.lines()
+  ---@diagnostic disable-next-line: unused-local
+  statemachine(function(winid, bufnr, viewport) return target_collectors.line_head(viewport) end)
+end
+
+return M

@@ -8,13 +8,11 @@
 -- * no cache
 --
 
-local tty = require("infra.tty")
-local unsafe = require("infra.unsafe")
-local fn = require("infra.fn")
-local jelly = require("infra.jellyfish")("gallop.statemachine", vim.log.levels.DEBUG)
 local ex = require("infra.ex")
-local prefer = require("infra.prefer")
+local jelly = require("infra.jellyfish")("gallop.statemachine", vim.log.levels.DEBUG)
 local jumplist = require("infra.jumplist")
+local prefer = require("infra.prefer")
+local tty = require("infra.tty")
 
 local facts = require("gallop.facts")
 
@@ -51,41 +49,6 @@ local function resolve_viewport(winid)
   return viewport
 end
 
----@param bufnr number
----@param viewport gallop.Viewport
----@param target_matcher vim.Regex
----@return gallop.Target[]
-local function collect_targets(bufnr, viewport, target_matcher)
-  local targets = {}
-  local lineslen = unsafe.lineslen(bufnr, fn.range(viewport.start_line, viewport.stop_line))
-
-  for lnum = viewport.start_line, viewport.stop_line - 1 do
-    local offset = viewport.start_col
-    local eol = math.min(viewport.stop_col, lineslen[lnum])
-    while offset < eol do
-      local col_start, col_stop
-      do -- match next target
-        local rel_start, rel_stop = target_matcher:match_line(bufnr, lnum, offset, eol)
-        if rel_start == nil then break end
-        col_start = rel_start + offset
-        col_stop = rel_stop + offset
-      end
-      do -- advance offset
-        local adv_start, adv_stop = facts.advance_matcher:match_line(bufnr, lnum, col_stop, eol)
-        if adv_start ~= nil then
-          offset = adv_stop + col_stop
-        else
-          offset = col_stop
-        end
-        assert(offset >= col_stop)
-      end
-      table.insert(targets, { lnum = lnum, col_start = col_start, col_stop = col_stop })
-    end
-  end
-
-  return targets
-end
-
 ---@param winid number
 ---@param bufnr number
 ---@param targets gallop.Target[]
@@ -108,7 +71,7 @@ end
 ---@param viewport gallop.Viewport
 local function clear_labels(winid, bufnr, viewport)
   api.nvim_win_set_hl_ns(winid, 0)
-  api.nvim_buf_clear_namespace(bufnr, facts.ns, viewport.start_col, viewport.stop_line)
+  api.nvim_buf_clear_namespace(bufnr, facts.ns, viewport.start_line, viewport.stop_line)
 end
 
 ---@param targets gallop.Target[]
@@ -137,25 +100,13 @@ local function goto_target(winid, target)
   api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start })
 end
 
----@param chars string @ascii characters
-return function(chars)
-  local target_matcher
-  do
-    -- behave like &smartcase
-    local pattern
-    if string.find(chars, "%u") then
-      pattern = [[\C\<]] .. chars
-    else
-      pattern = [[\c\<]] .. chars
-    end
-    target_matcher = vim.regex(pattern)
-  end
-
+---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport)
+return function(collect_target)
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_win_get_buf(winid)
 
   local viewport = resolve_viewport(winid)
-  local targets = collect_targets(bufnr, viewport, target_matcher)
+  local targets = collect_target(winid, bufnr, viewport)
 
   if #targets == 0 then return jelly.debug("no target found") end
   if #targets == 1 then return goto_target(winid, targets[1]) end
