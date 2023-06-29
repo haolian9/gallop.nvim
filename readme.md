@@ -1,4 +1,4 @@
-an opinionated, crude-made jump motion implementation
+an opinionated jump motion implementation
 
 https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8ac9-8066b6274f63.mp4
 
@@ -18,7 +18,7 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 
 ## status
 * it just works on my machine (tm)
-* feature freezed
+* it is feature-frozen
 
 ## prerequisites
 * linux
@@ -26,18 +26,13 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 * haolian9/infra.nvim
 
 ## usage
-* take a look at `require'gallop'()`
-* here's my personal setting
+
+here's my personal setting
 
 ```
 do
   local last_chars
-  local function gallop() last_chars = require("gallop")(2, last_chars) or last_chars end
-  local function replay()
-    if last_chars == nil then return jelly.warn("no previous search") end
-    require("gallop")(nil, last_chars)
-  end
-  m({ "n", "v" }, "s", gallop)
-  m({ "n", "v" }, "S", replay)
+  m({ "n", "x" }, "s", function() last_chars = require("gallop").words(2, last_chars) or last_chars end)
+  m({ "n", "x" }, "S", function() require("gallop").lines() end)
 end
 ```
