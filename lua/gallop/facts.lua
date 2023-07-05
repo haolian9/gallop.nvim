@@ -3,7 +3,6 @@ local M = {}
 local fn = require("infra.fn")
 local api = vim.api
 
-M.labels = {}
 do
   local list = {}
   local dict = {}
@@ -20,13 +19,14 @@ do
     end
   end
 
-  function M.labels.index(label) return dict[label] end
-  function M.labels.iter() return fn.iter(list) end
+  M.labels = {
+    index = function(label) return dict[label] end,
+    iter = function() return fn.iter(list) end,
+  }
 end
 
 do
   M.ns = api.nvim_create_namespace("gallop")
-  -- todo: nvim bug: nvim_set_hl(0) vs `hi clear`; see https://github.com/neovim/neovim/issues/23589
   api.nvim_set_hl(M.ns, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
 end
 
