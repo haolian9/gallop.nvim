@@ -9,7 +9,7 @@
 --
 
 local ex = require("infra.ex")
-local jelly = require("infra.jellyfish")("gallop.statemachine", vim.log.levels.DEBUG)
+local jelly = require("infra.jellyfish")("gallop.statemachine", "debug")
 local jumplist = require("infra.jumplist")
 local prefer = require("infra.prefer")
 local tty = require("infra.tty")
@@ -49,30 +49,23 @@ local function resolve_viewport(winid)
   return viewport
 end
 
----@param winid number
 ---@param bufnr number
 ---@param targets gallop.Target[]
-local function place_labels(winid, bufnr, targets)
-  api.nvim_win_set_hl_ns(winid, facts.ns)
-
+local function place_labels(bufnr, targets)
   local label_iter = facts.labels.iter()
   for k, m in ipairs(targets) do
     local label = label_iter()
     if label == nil then return jelly.warn("ran out of labels: %d", #targets - k) end
-    api.nvim_buf_set_extmark(bufnr, facts.ns, m.lnum, m.col_start, {
+    api.nvim_buf_set_extmark(bufnr, facts.label_ns, m.lnum, m.col_start, {
       virt_text = { { label, "GallopStop" } },
       virt_text_pos = "overlay",
     })
   end
 end
 
----@param winid number
 ---@param bufnr number
 ---@param viewport gallop.Viewport
-local function clear_labels(winid, bufnr, viewport)
-  api.nvim_win_set_hl_ns(winid, 0)
-  api.nvim_buf_clear_namespace(bufnr, facts.ns, viewport.start_line, viewport.stop_line)
-end
+local function clear_labels(bufnr, viewport) api.nvim_buf_clear_namespace(bufnr, facts.label_ns, viewport.start_line, viewport.stop_line) end
 
 ---@param targets gallop.Target[]
 ---@param label string
@@ -111,7 +104,7 @@ return function(collect_target)
   if #targets == 0 then return jelly.debug("no target found") end
   if #targets == 1 then return goto_target(winid, targets[1]) end
 
-  place_labels(winid, bufnr, targets)
+  place_labels(bufnr, targets)
   ex("redraw")
 
   local ok, err = pcall(function()
@@ -124,6 +117,6 @@ return function(collect_target)
       if target ~= nil then return goto_target(winid, target) end
     end
   end)
-  clear_labels(winid, bufnr, viewport)
+  clear_labels(bufnr, viewport)
   if not ok then error(err) end
 end

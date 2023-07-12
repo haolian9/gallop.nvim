@@ -14,7 +14,7 @@
 
 local M = {}
 
-local jelly = require("infra.jellyfish")("gallop", vim.log.levels.DEBUG)
+local jelly = require("infra.jellyfish")("gallop", "debug")
 local tty = require("infra.tty")
 
 local statemachine = require("gallop.statemachine")

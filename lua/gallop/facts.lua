@@ -26,8 +26,8 @@ do
 end
 
 do
-  M.ns = api.nvim_create_namespace("gallop")
-  api.nvim_set_hl(M.ns, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
+  M.label_ns = api.nvim_create_namespace("gallop.labels")
+  api.nvim_set_hl(0, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
 end
 
 return M
