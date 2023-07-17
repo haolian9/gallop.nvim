@@ -1,6 +1,8 @@
 local M = {}
 
 local fn = require("infra.fn")
+local highlighter = require("infra.highlighter")
+
 local api = vim.api
 
 do
@@ -27,7 +29,14 @@ end
 
 do
   M.label_ns = api.nvim_create_namespace("gallop.labels")
-  api.nvim_set_hl(0, "GallopStop", { ctermfg = 15, ctermbg = 8, cterm = { bold = true } })
+  do
+    local hi = highlighter(0)
+    if vim.go.background == "light" then
+      hi("GallopStop", { fg = 15, bg = 8, bold = true })
+    else
+      hi("GallopStop", { fg = 8, bg = 15, bold = true })
+    end
+  end
 end
 
 return M
