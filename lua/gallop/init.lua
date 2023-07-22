@@ -14,7 +14,7 @@
 
 local M = {}
 
-local jelly = require("infra.jellyfish")("gallop", "debug")
+local jelly = require("infra.jellyfish")("gallop")
 local tty = require("infra.tty")
 
 local statemachine = require("gallop.statemachine")

@@ -9,7 +9,7 @@
 --
 
 local ex = require("infra.ex")
-local jelly = require("infra.jellyfish")("gallop.statemachine", "debug")
+local jelly = require("infra.jellyfish")("gallop.statemachine")
 local jumplist = require("infra.jumplist")
 local prefer = require("infra.prefer")
 local tty = require("infra.tty")
