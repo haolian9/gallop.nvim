@@ -20,6 +20,8 @@ local tty = require("infra.tty")
 local statemachine = require("gallop.statemachine")
 local target_collectors = require("gallop.target_collectors")
 
+local api = vim.api
+
 --usecases
 --* (3,   nil) ask 3 chars, if it's been canceled, exit
 --* (nil, nil) ask 2 chars, if it's been canceled, exit
@@ -54,6 +56,14 @@ end
 function M.lines()
   ---@diagnostic disable-next-line: unused-local
   statemachine(function(winid, bufnr, viewport) return target_collectors.line_head(viewport) end)
+end
+
+function M.cursorcolumn()
+  statemachine(function(winid, bufnr, viewport)
+    local _ = bufnr
+    local col = api.nvim_win_get_cursor(winid)[2]
+    return target_collectors.cursorcolumn(viewport, col)
+  end)
 end
 
 return M

@@ -26,6 +26,7 @@ local facts = require("gallop.facts")
 ---@field lnum      number 0-indexed
 ---@field col_start number 0-indexed, inclusive
 ---@field col_stop  number 0-indexed, exclusive
+---@field carrier   'buf'|'win'
 
 local api = vim.api
 
@@ -53,13 +54,22 @@ end
 ---@param targets gallop.Target[]
 local function place_labels(bufnr, targets)
   local label_iter = facts.labels.iter()
-  for k, m in ipairs(targets) do
+  for k, target in ipairs(targets) do
     local label = label_iter()
     if label == nil then return jelly.warn("ran out of labels: %d", #targets - k) end
-    api.nvim_buf_set_extmark(bufnr, facts.label_ns, m.lnum, m.col_start, {
-      virt_text = { { label, "GallopStop" } },
-      virt_text_pos = "overlay",
-    })
+    if target.carrier == "buf" then
+      api.nvim_buf_set_extmark(bufnr, facts.label_ns, target.lnum, target.col_start, {
+        virt_text = { { label, "GallopStop" } },
+        virt_text_pos = "overlay",
+      })
+    elseif target.carrier == "win" then
+      api.nvim_buf_set_extmark(bufnr, facts.label_ns, target.lnum, 0, {
+        virt_text = { { label, "GallopStop" } },
+        virt_text_win_col = target.col_start,
+      })
+    else
+      error("unexpected target.carrier")
+    end
   end
 end
 
