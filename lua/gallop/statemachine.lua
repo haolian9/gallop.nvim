@@ -6,6 +6,7 @@
 -- * opininated pattern for targets
 -- * no excluding comments and string literals
 -- * no cache
+-- * no interactive highlight, which bloats the code at lease 3 times
 --
 
 local ex = require("infra.ex")
@@ -103,7 +104,7 @@ local function goto_target(winid, target)
   api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start })
 end
 
----@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport)
+---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[]
 return function(collect_target)
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_win_get_buf(winid)
