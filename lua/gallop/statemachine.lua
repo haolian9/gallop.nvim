@@ -8,6 +8,9 @@
 -- * no cache
 -- * no interactive highlight, which bloats the code at lease 3 times
 --
+-- known bugs
+-- * the width tabs >1 in rendering, but no way to tell win_set_cursor respect it
+--
 
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("gallop.statemachine")
@@ -18,16 +21,17 @@ local tty = require("infra.tty")
 local facts = require("gallop.facts")
 
 ---@class gallop.Viewport
----@field start_line number 0-indexed, inclusive
----@field start_col  number 0-indexed, inclusive
----@field stop_line  number 0-indexed, exclusive
----@field stop_col   number 0-indexed, exclusive
+---@field start_line integer @0-indexed, inclusive
+---@field start_col  integer @0-indexed, inclusive
+---@field stop_line  integer @0-indexed, exclusive
+---@field stop_col   integer @0-indexed, exclusive
 
 ---@class gallop.Target
----@field lnum      number 0-indexed
----@field col_start number 0-indexed, inclusive
----@field col_stop  number 0-indexed, exclusive
+---@field lnum      integer @0-indexed; always anchors to buf
+---@field col_start integer @0-indexed, inclusive; anchors to buf or win
+---@field col_stop  integer @0-indexed, exclusive; anchors to buf or win
 ---@field carrier   'buf'|'win'
+---@field col_offset integer @by design, 0 for carrier=buf; n for carrier=win
 
 local api = vim.api
 
@@ -51,7 +55,7 @@ local function resolve_viewport(winid)
   return viewport
 end
 
----@param bufnr number
+---@param bufnr integer
 ---@param targets gallop.Target[]
 local function place_labels(bufnr, targets)
   local label_iter = facts.labels.iter()
@@ -74,7 +78,7 @@ local function place_labels(bufnr, targets)
   end
 end
 
----@param bufnr number
+---@param bufnr integer
 ---@param viewport gallop.Viewport
 local function clear_labels(bufnr, viewport) api.nvim_buf_clear_namespace(bufnr, facts.label_ns, viewport.start_line, viewport.stop_line) end
 
@@ -91,7 +95,7 @@ local function label_to_target(targets, label)
   return target
 end
 
----@param winid number
+---@param winid integer
 ---@param target gallop.Target
 local function goto_target(winid, target)
   do
@@ -101,7 +105,7 @@ local function goto_target(winid, target)
 
   jumplist.push_here()
 
-  api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start })
+  api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start + target.col_offset })
 end
 
 ---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[]

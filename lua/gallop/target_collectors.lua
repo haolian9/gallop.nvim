@@ -3,8 +3,6 @@ local M = {}
 local fn = require("infra.fn")
 local unsafe = require("infra.unsafe")
 
-local api = vim.api
-
 do
   -- for advancing the offset if the rest of a line starts with these chars
   local advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
@@ -49,7 +47,7 @@ do
           end
           assert(offset >= col_stop)
         end
-        table.insert(targets, { lnum = lnum, col_start = col_start, col_stop = col_stop, carrier = "win" })
+        table.insert(targets, { lnum = lnum, col_start = col_start, col_stop = col_stop, carrier = "buf", col_offset = 0 })
       end
     end
 
@@ -62,7 +60,7 @@ end
 function M.line_head(viewport)
   local targets = {}
   for lnum in fn.range(viewport.start_line, viewport.stop_line) do
-    table.insert(targets, { lnum = lnum, col_start = 0, col_stop = 1, carrier = "buf" })
+    table.insert(targets, { lnum = lnum, col_start = 0, col_stop = 1, carrier = "buf", col_offset = 0 })
   end
   return targets
 end
@@ -70,9 +68,13 @@ end
 ---@param viewport gallop.Viewport
 ---@return gallop.Target[]
 function M.cursorcolumn(viewport, curcol)
+  local offset = viewport.start_col
+  local start = curcol - offset
+  local stop = start + 1
+
   local targets = {}
   for lnum in fn.range(viewport.start_line, viewport.stop_line) do
-    table.insert(targets, { lnum = lnum, col_start = curcol, col_stop = curcol + 1, carrier = "win" })
+    table.insert(targets, { lnum = lnum, col_start = start, col_stop = stop, carrier = "win", col_offset = offset })
   end
   return targets
 end
