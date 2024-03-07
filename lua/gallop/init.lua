@@ -22,18 +22,18 @@ local target_collectors = require("gallop.target_collectors")
 
 local api = vim.api
 
---usecases
---* (3,   nil) ask 3 chars, if it's been canceled, exit
---* (nil, nil) ask 2 chars, if it's been canceled, exit
---* (nil, foo) no asking, use 'foo' directly
---* (3,   foo) ask 3 chars, if it's been canceled, use 'foo' directly
---
----@param nchar? number @nil=2
----@param spare_chars? string @ascii chars
----@return string? chars @nil if error occurs
-function M.words(nchar, spare_chars)
-  local chars
-  do
+do
+  --usecases
+  --* (3,   nil) ask 3 chars, if it's been canceled, exit
+  --* (nil, nil) ask 2 chars, if it's been canceled, exit
+  --* (nil, foo) no asking, use 'foo' directly
+  --* (3,   foo) ask 3 chars, if it's been canceled, use 'foo' directly
+  --
+  ---@param nchar? integer @nil=2
+  ---@param spare_chars? string @ascii chars
+  ---@return string?
+  local function determine_chars(nchar, spare_chars)
+    local chars
     if nchar ~= nil then
       chars = tty.read_chars(nchar)
       if #chars == 0 and spare_chars ~= nil then chars = spare_chars end
@@ -45,12 +45,36 @@ function M.words(nchar, spare_chars)
       end
     end
     if #chars == 0 then return jelly.debug("canceled") end
+    return chars
   end
 
-  ---@diagnostic disable-next-line: unused-local
-  statemachine(function(winid, bufnr, viewport) return target_collectors.word_head(bufnr, viewport, chars) end)
+  --forms: (3,nil), (nil,nil), (nil,foo), (3,foo)
+  ---@param nchar? integer @nil=2
+  ---@param spare_chars? string @ascii chars
+  ---@return string? chars @nil if error occurs
+  function M.words(nchar, spare_chars)
+    local chars = determine_chars(nchar, spare_chars)
+    if chars == nil then return end
 
-  return chars
+    ---@diagnostic disable-next-line: unused-local
+    statemachine(function(winid, bufnr, viewport) return target_collectors.word_head(bufnr, viewport, chars) end)
+
+    return chars
+  end
+
+  --forms: (3,nil), (nil,nil), (nil,foo), (3,foo)
+  ---@param nchar? integer @nil=2
+  ---@param spare_chars? string @ascii chars
+  ---@return string? chars @nil if error occurs
+  function M.strings(nchar, spare_chars)
+    local chars = determine_chars(nchar, spare_chars)
+    if chars == nil then return end
+
+    ---@diagnostic disable-next-line: unused-local
+    statemachine(function(winid, bufnr, viewport) return target_collectors.string(bufnr, viewport, chars) end)
+
+    return chars
+  end
 end
 
 function M.lines()

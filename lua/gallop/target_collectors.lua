@@ -9,20 +9,10 @@ do
 
   ---@param bufnr number
   ---@param viewport gallop.Viewport
-  ---@param chars string
+  ---@param pattern string @vim regex pattern
   ---@return gallop.Target[]
-  function M.word_head(bufnr, viewport, chars)
-    local target_matcher
-    do
-      -- behave like &smartcase
-      local pattern
-      if string.find(chars, "%u") then
-        pattern = [[\C\<]] .. chars
-      else
-        pattern = [[\c\<]] .. chars
-      end
-      target_matcher = vim.regex(pattern)
-    end
+  local function main(bufnr, viewport, pattern)
+    local target_matcher = vim.regex(pattern)
 
     local targets = {}
     local lineslen = unsafe.lineslen(bufnr, fn.range(viewport.start_line, viewport.stop_line))
@@ -52,6 +42,36 @@ do
     end
 
     return targets
+  end
+
+  ---@param bufnr integer
+  ---@param viewport gallop.Viewport
+  ---@param chars string @ascii only by design
+  function M.word_head(bufnr, viewport, chars)
+    -- behave like &smartcase
+    local pattern
+    if string.find(chars, "%u") then
+      pattern = [[\C\<]] .. chars
+    else
+      pattern = [[\c\<]] .. chars
+    end
+
+    return main(bufnr, viewport, pattern)
+  end
+
+  ---@param bufnr integer
+  ---@param viewport gallop.Viewport
+  ---@param chars string @ascii only by design
+  function M.string(bufnr, viewport, chars)
+    -- behave like &smartcase
+    local pattern
+    if string.find(chars, "%u") then
+      pattern = [[\C]] .. chars
+    else
+      pattern = [[\c]] .. chars
+    end
+
+    return main(bufnr, viewport, pattern)
   end
 end
 
