@@ -85,8 +85,8 @@ end
 function M.cursorcolumn()
   statemachine(function(winid, bufnr, viewport)
     local _ = bufnr
-    local col = api.nvim_win_get_cursor(winid)[2]
-    return target_collectors.cursorcolumn(viewport, col)
+    local screen_col = api.nvim_win_call(winid, function() return vim.fn.virtcol(".") end)
+    return target_collectors.cursorcolumn(viewport, winid, screen_col)
   end)
 end
 

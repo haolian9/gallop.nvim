@@ -28,7 +28,7 @@ local facts = require("gallop.facts")
 
 ---@class gallop.Target
 ---@field lnum      integer @0-indexed; always anchors to buf
----@field col_start integer @0-indexed, inclusive; anchors to buf or win
+---@field col_start integer @0-indexed, inclusive; anchors to buf or win; buf=byte_col, win=screen_col/virt_col
 ---@field col_stop  integer @0-indexed, exclusive; anchors to buf or win
 ---@field carrier   'buf'|'win'
 ---@field col_offset integer @by design, 0 for carrier=buf; n for carrier=win
@@ -70,7 +70,7 @@ local function place_labels(bufnr, targets)
     elseif target.carrier == "win" then
       api.nvim_buf_set_extmark(bufnr, facts.label_ns, target.lnum, 0, {
         virt_text = { { label, "GallopStop" } },
-        virt_text_win_col = target.col_start,
+        virt_text_win_col = target.col_start - 1, -- dont know why, but -1 is necessary
       })
     else
       error("unexpected target.carrier")
@@ -98,14 +98,27 @@ end
 ---@param winid integer
 ---@param target gallop.Target
 local function goto_target(winid, target)
-  do
+  local target_col
+  if target.carrier == "buf" then
     local row, col = unpack(api.nvim_win_get_cursor(winid))
     if target.lnum + 1 == row and target.col_start == col then return end
+
+    target_col = target.col_start + target.col_offset
+  elseif target.carrier == "win" then
+    local cursor = api.nvim_win_get_cursor(winid)
+    local byte_col = api.nvim_win_call(winid, function() return vim.fn.virtcol2col(winid, target.lnum + 1, target.col_start) - 1 end)
+    if byte_col == -1 then -- no enough chars in this line for given screen_col
+      target_col = 0
+    else
+      if target.lnum + 1 == cursor[1] and cursor[2] == byte_col then return end
+
+      target_col = byte_col + target.col_offset
+    end
   end
 
   jumplist.push_here()
 
-  api.nvim_win_set_cursor(winid, { target.lnum + 1, target.col_start + target.col_offset })
+  api.nvim_win_set_cursor(winid, { target.lnum + 1, target_col })
 end
 
 ---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[]

@@ -86,11 +86,13 @@ function M.line_head(viewport)
 end
 
 ---@param viewport gallop.Viewport
+---@param winid integer
+---@param screen_col integer @see virtcol
 ---@return gallop.Target[]
-function M.cursorcolumn(viewport, curcol)
+function M.cursorcolumn(viewport, winid, screen_col)
   local offset = viewport.start_col
-  local start = curcol - offset
-  local stop = start + 1
+  local start = screen_col
+  local stop = screen_col + 1
 
   local targets = {}
   for lnum in fn.range(viewport.start_line, viewport.stop_line) do
