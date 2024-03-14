@@ -114,6 +114,8 @@ local function goto_target(winid, target)
 
       target_col = byte_col + target.col_offset
     end
+  else
+    error("unexpected target.carrier")
   end
 
   jumplist.push_here()
