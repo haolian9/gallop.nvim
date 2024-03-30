@@ -1,6 +1,7 @@
 local M = {}
 
 local fn = require("infra.fn")
+local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
 
 do
@@ -11,7 +12,9 @@ do
   ---@param viewport gallop.Viewport
   ---@param pattern string @vim regex pattern
   ---@return gallop.Target[]
-  local function main(bufnr, viewport, pattern)
+  local function collect(bufnr, viewport, pattern)
+    jelly.debug("pattern='%s'", pattern)
+
     local target_matcher = vim.regex(pattern)
 
     local targets = {}
@@ -44,52 +47,74 @@ do
     return targets
   end
 
+  ---according to `:h magic`
+  ---@param str string
+  ---@return string
+  local function escaped(str) return vim.fn.escape(str, [[.$*~\/]]) end
+
   ---@param bufnr integer
   ---@param viewport gallop.Viewport
   ---@param chars string @ascii only by design
+  ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.word_head(bufnr, viewport, chars)
-    -- behave like &smartcase
-    local pattern
-    if string.find(chars, "%u") then
-      pattern = [[\C\<]] .. chars
-    else
-      pattern = [[\c\<]] .. chars
+    local parts = {}
+    do
+      --word bound
+      local c0 = string.byte(string.sub(chars, 1, 1))
+      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then table.insert(parts, 1, [[\<]]) end
+
+      --&smartcase
+      if string.find(chars, "%u") then
+        table.insert(parts, 1, [[\C]])
+      else
+        table.insert(parts, 1, [[\c]])
+      end
+
+      table.insert(parts, escaped(chars))
     end
 
-    return main(bufnr, viewport, pattern)
+    local pattern = table.concat(parts, "")
+
+    return collect(bufnr, viewport, pattern), pattern
   end
 
   ---@param bufnr integer
   ---@param viewport gallop.Viewport
   ---@param chars string @ascii only by design
+  ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.string(bufnr, viewport, chars)
-    -- behave like &smartcase
-    local pattern
-    if string.find(chars, "%u") then
-      pattern = [[\C]] .. chars
-    else
-      pattern = [[\c]] .. chars
+    local parts = {}
+    do
+      --&smartcase
+      if string.find(chars, "%u") then
+        table.insert(parts, 1, [[\C]])
+      else
+        table.insert(parts, 1, [[\c]])
+      end
+
+      table.insert(parts, escaped(chars))
     end
 
-    return main(bufnr, viewport, pattern)
+    local pattern = table.concat(parts, "")
+
+    return collect(bufnr, viewport, pattern), pattern
   end
 end
 
 ---@param viewport gallop.Viewport
----@return gallop.Target[]
+---@return gallop.Target[], string? @(targets, pattern-being-used)
 function M.line_head(viewport)
   local targets = {}
   for lnum in fn.range(viewport.start_line, viewport.stop_line) do
     table.insert(targets, { lnum = lnum, col_start = 0, col_stop = 1, carrier = "buf", col_offset = 0 })
   end
-  return targets
+  return targets, nil
 end
 
 ---@param viewport gallop.Viewport
----@param winid integer
 ---@param screen_col integer @see virtcol
----@return gallop.Target[]
-function M.cursorcolumn(viewport, winid, screen_col)
+---@return gallop.Target[], string? @(targets, pattern-being-used)
+function M.cursorcolumn(viewport, screen_col)
   local offset = viewport.start_col
   local start = screen_col
   local stop = screen_col + 1
@@ -98,7 +123,7 @@ function M.cursorcolumn(viewport, winid, screen_col)
   for lnum in fn.range(viewport.start_line, viewport.stop_line) do
     table.insert(targets, { lnum = lnum, col_start = start, col_stop = stop, carrier = "win", col_offset = offset })
   end
-  return targets
+  return targets, nil
 end
 
 return M

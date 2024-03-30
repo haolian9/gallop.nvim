@@ -15,6 +15,7 @@
 local M = {}
 
 local jelly = require("infra.jellyfish")("gallop")
+local repeats = require("infra.repeats")
 local tty = require("infra.tty")
 
 local statemachine = require("gallop.statemachine")
@@ -48,16 +49,36 @@ do
     return chars
   end
 
+  ---search within the visible region of current window
+  ---@param pattern string @vim regex pattern
+  local function remember_charsearch(pattern)
+    local function next() vim.fn.search(pattern, "s", vim.fn.line("w$")) end
+    local function prev() vim.fn.search(pattern, "bs", vim.fn.line("w0")) end
+
+    repeats.remember_charsearch(next, prev)
+  end
+
   --forms: (3,nil), (nil,nil), (nil,foo), (3,foo)
   ---@param nchar? integer @nil=2
   ---@param spare_chars? string @ascii chars
+  ---@param enable_repeat? boolean @nil=false
   ---@return string? chars @nil if error occurs
-  function M.words(nchar, spare_chars)
+  function M.words(nchar, spare_chars, enable_repeat)
+    if enable_repeat == nil then enable_repeat = false end
+
     local chars = determine_chars(nchar, spare_chars)
     if chars == nil then return end
 
+    local pattern
+
     ---@diagnostic disable-next-line: unused-local
-    statemachine(function(winid, bufnr, viewport) return target_collectors.word_head(bufnr, viewport, chars) end)
+    statemachine(function(winid, bufnr, viewport)
+      local targets
+      targets, pattern = target_collectors.word_head(bufnr, viewport, chars)
+      return targets
+    end)
+
+    if enable_repeat then remember_charsearch(pattern) end
 
     return chars
   end
@@ -65,13 +86,24 @@ do
   --forms: (3,nil), (nil,nil), (nil,foo), (3,foo)
   ---@param nchar? integer @nil=2
   ---@param spare_chars? string @ascii chars
+  ---@param enable_repeat? boolean @nil=false
   ---@return string? chars @nil if error occurs
-  function M.strings(nchar, spare_chars)
+  function M.strings(nchar, spare_chars, enable_repeat)
+    if enable_repeat == nil then enable_repeat = false end
+
     local chars = determine_chars(nchar, spare_chars)
     if chars == nil then return end
 
+    local pattern
+
     ---@diagnostic disable-next-line: unused-local
-    statemachine(function(winid, bufnr, viewport) return target_collectors.string(bufnr, viewport, chars) end)
+    statemachine(function(winid, bufnr, viewport)
+      local targets
+      targets, pattern = target_collectors.string(bufnr, viewport, chars)
+      return targets
+    end)
+
+    if enable_repeat then remember_charsearch(pattern) end
 
     return chars
   end
@@ -86,7 +118,7 @@ function M.cursorcolumn()
   statemachine(function(winid, bufnr, viewport)
     local _ = bufnr
     local screen_col = api.nvim_win_call(winid, function() return vim.fn.virtcol(".") end)
-    return target_collectors.cursorcolumn(viewport, winid, screen_col)
+    return target_collectors.cursorcolumn(viewport, screen_col)
   end)
 end
 

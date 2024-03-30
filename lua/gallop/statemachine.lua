@@ -123,7 +123,7 @@ local function goto_target(winid, target)
   api.nvim_win_set_cursor(winid, { target.lnum + 1, target_col })
 end
 
----@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[]
+---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[], string?
 return function(collect_target)
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_win_get_buf(winid)
