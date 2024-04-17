@@ -12,6 +12,7 @@
 -- * the width tabs >1 in rendering, but no way to tell win_set_cursor respect it
 --
 
+local ctx = require("infra.ctx")
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("gallop.statemachine")
 local jumplist = require("infra.jumplist")
@@ -43,7 +44,7 @@ local function resolve_viewport(winid)
   local viewport = {}
 
   local wininfo = assert(vim.fn.getwininfo(winid)[1])
-  local leftcol = api.nvim_win_call(winid, vim.fn.winsaveview).leftcol
+  local leftcol = ctx.win(winid, vim.fn.winsaveview).leftcol
   local topline = wininfo.topline - 1
   local botline = wininfo.botline - 1
 
@@ -106,7 +107,7 @@ local function goto_target(winid, target)
     target_col = target.col_start + target.col_offset
   elseif target.carrier == "win" then
     local cursor = api.nvim_win_get_cursor(winid)
-    local byte_col = api.nvim_win_call(winid, function() return vim.fn.virtcol2col(winid, target.lnum + 1, target.col_start) - 1 end)
+    local byte_col = ctx.win(winid, function() return vim.fn.virtcol2col(winid, target.lnum + 1, target.col_start) - 1 end)
     if byte_col == -1 then -- no enough chars in this line for given screen_col
       target_col = 0
     else

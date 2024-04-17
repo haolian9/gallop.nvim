@@ -14,6 +14,7 @@
 
 local M = {}
 
+local ctx = require("infra.ctx")
 local jelly = require("infra.jellyfish")("gallop")
 local repeats = require("infra.repeats")
 local tty = require("infra.tty")
@@ -117,7 +118,7 @@ end
 function M.cursorcolumn()
   statemachine(function(winid, bufnr, viewport)
     local _ = bufnr
-    local screen_col = api.nvim_win_call(winid, function() return vim.fn.virtcol(".") end)
+    local screen_col = ctx.win(winid, function() return vim.fn.virtcol(".") end)
     return target_collectors.cursorcolumn(viewport, screen_col)
   end)
 end
