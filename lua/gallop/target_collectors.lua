@@ -3,19 +3,20 @@ local M = {}
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
+local VimVeryRegex = require("infra.VimVeryRegex")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
-  local advance_matcher = vim.regex([[^[^a-zA-Z0-9_]\+]])
+  local advance_matcher = VimVeryRegex([[^[^a-zA-Z0-9_]+]])
 
   ---@param bufnr number
   ---@param viewport gallop.Viewport
-  ---@param pattern string @vim regex pattern
+  ---@param pattern string @vim very magic regex pattern
   ---@return gallop.Target[]
   local function collect(bufnr, viewport, pattern)
     jelly.debug("pattern='%s'", pattern)
 
-    local target_matcher = vim.regex(pattern)
+    local target_matcher = VimVeryRegex(pattern)
 
     local targets = {}
     local lineslen = unsafe.lineslen(bufnr, fn.range(viewport.start_line, viewport.stop_line))

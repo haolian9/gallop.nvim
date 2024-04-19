@@ -22,8 +22,6 @@ local tty = require("infra.tty")
 local statemachine = require("gallop.statemachine")
 local target_collectors = require("gallop.target_collectors")
 
-local api = vim.api
-
 do
   --usecases
   --* (3,   nil) ask 3 chars, if it's been canceled, exit
@@ -51,7 +49,7 @@ do
   end
 
   ---search within the visible region of current window
-  ---@param pattern string @vim regex pattern
+  ---@param pattern string @vim very magic regex pattern
   local function remember_charsearch(pattern)
     local function next() vim.fn.search(pattern, "s", vim.fn.line("w$")) end
     local function prev() vim.fn.search(pattern, "bs", vim.fn.line("w0")) end
