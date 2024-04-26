@@ -130,9 +130,9 @@ return function(collect_target)
   local bufnr = api.nvim_win_get_buf(winid)
 
   local viewport = resolve_viewport(winid)
-  local targets = collect_target(winid, bufnr, viewport)
+  local targets, pattern = collect_target(winid, bufnr, viewport)
 
-  if #targets == 0 then return jelly.debug("no target found") end
+  if #targets == 0 then return jelly.info("no target found using pattern=%s", pattern) end
   if #targets == 1 then return goto_target(winid, targets[1]) end
 
   place_labels(bufnr, targets)
@@ -142,7 +142,7 @@ return function(collect_target)
     -- keep asking user for a valid label
     while true do
       local chosen_label = tty.read_chars(1)
-      if #chosen_label == 0 then return jelly.info("chose no label") end
+      if chosen_label == "" then return jelly.info("chose no label") end
       local target = label_to_target(targets, chosen_label)
       -- can not redraw here, since showing message in cmdline will move the cursor and wait an `<enter>`
       if target ~= nil then return goto_target(winid, target) end

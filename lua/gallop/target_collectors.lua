@@ -62,7 +62,7 @@ do
     do
       --word bound
       local c0 = string.byte(string.sub(chars, 1, 1))
-      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then table.insert(parts, 1, [[\<]]) end
+      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then table.insert(parts, 1, [[<]]) end
 
       --&smartcase
       if string.find(chars, "%u") then

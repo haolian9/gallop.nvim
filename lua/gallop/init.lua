@@ -32,11 +32,11 @@ do
   ---@param nchar? integer @nil=2
   ---@param spare_chars? string @ascii chars
   ---@return string?
-  local function determine_chars(nchar, spare_chars)
+  local function await_input_chars(nchar, spare_chars)
     local chars
     if nchar ~= nil then
       chars = tty.read_chars(nchar)
-      if #chars == 0 and spare_chars ~= nil then chars = spare_chars end
+      if chars == "" and spare_chars ~= nil then chars = spare_chars end
     else
       if spare_chars ~= nil then
         chars = spare_chars
@@ -44,7 +44,7 @@ do
         chars = tty.read_chars(2)
       end
     end
-    if #chars == 0 then return jelly.debug("canceled") end
+    if chars == "" then return jelly.debug("canceled") end
     return chars
   end
 
@@ -65,7 +65,7 @@ do
   function M.words(nchar, spare_chars, enable_repeat)
     if enable_repeat == nil then enable_repeat = false end
 
-    local chars = determine_chars(nchar, spare_chars)
+    local chars = await_input_chars(nchar, spare_chars)
     if chars == nil then return end
 
     local pattern
@@ -74,7 +74,7 @@ do
     statemachine(function(winid, bufnr, viewport)
       local targets
       targets, pattern = target_collectors.word_head(bufnr, viewport, chars)
-      return targets
+      return targets, pattern
     end)
 
     if enable_repeat then remember_charsearch(pattern) end
@@ -90,7 +90,7 @@ do
   function M.strings(nchar, spare_chars, enable_repeat)
     if enable_repeat == nil then enable_repeat = false end
 
-    local chars = determine_chars(nchar, spare_chars)
+    local chars = await_input_chars(nchar, spare_chars)
     if chars == nil then return end
 
     local pattern
@@ -99,7 +99,7 @@ do
     statemachine(function(winid, bufnr, viewport)
       local targets
       targets, pattern = target_collectors.string(bufnr, viewport, chars)
-      return targets
+      return targets, pattern
     end)
 
     if enable_repeat then remember_charsearch(pattern) end
