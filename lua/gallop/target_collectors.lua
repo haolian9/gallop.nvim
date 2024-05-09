@@ -3,23 +3,20 @@ local M = {}
 local fn = require("infra.fn")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
-local VimVeryRegex = require("infra.VimVeryRegex")
+
+local ropes = require("string.buffer")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
-  local advance_matcher = VimVeryRegex([[^[^a-zA-Z0-9_]+]])
+  local advance_matcher = vim.regex([[\v^[^a-zA-Z0-9_]+]])
 
   ---@param bufnr number
   ---@param viewport gallop.Viewport
-  ---@param pattern string @vim very magic regex pattern
+  ---@param target_regex vim.Regex
   ---@return gallop.Target[]
-  local function collect(bufnr, viewport, pattern)
-    jelly.debug("pattern='%s'", pattern)
-
-    local target_matcher = VimVeryRegex(pattern)
-
+  local function collect(bufnr, viewport, target_regex)
     local targets = {}
-    local lineslen = unsafe.lineslen(bufnr, fn.range(viewport.start_line, viewport.stop_line))
+    local lineslen = fn.todict(unsafe.linelen_iter(bufnr, fn.range(viewport.start_line, viewport.stop_line)))
 
     for lnum in fn.range(viewport.start_line, viewport.stop_line) do
       local offset = viewport.start_col
@@ -27,7 +24,7 @@ do
       while offset < eol do
         local col_start, col_stop
         do -- match next target
-          local rel_start, rel_stop = target_matcher:match_line(bufnr, lnum, offset, eol)
+          local rel_start, rel_stop = target_regex:match_line(bufnr, lnum, offset, eol)
           if rel_start == nil then break end
           col_start = rel_start + offset
           col_stop = rel_stop + offset
@@ -48,35 +45,27 @@ do
     return targets
   end
 
-  ---according to `:h magic`
-  ---@param str string
-  ---@return string
-  local function escaped(str) return vim.fn.escape(str, [[.$*~\/]]) end
-
   ---@param bufnr integer
   ---@param viewport gallop.Viewport
   ---@param chars string @ascii only by design
   ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.word_head(bufnr, viewport, chars)
-    local parts = {}
+    local pattern
     do
+      local rope = ropes.new()
+      rope:put([[\M]])
+      --&smartcase
+      rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
       --word bound
       local c0 = string.byte(string.sub(chars, 1, 1))
-      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then table.insert(parts, 1, [[<]]) end
+      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then rope:put([[\<]]) end
+      rope:put(chars)
 
-      --&smartcase
-      if string.find(chars, "%u") then
-        table.insert(parts, 1, [[\C]])
-      else
-        table.insert(parts, 1, [[\c]])
-      end
-
-      table.insert(parts, escaped(chars))
+      pattern = rope:tostring()
+      jelly.debug("pattern='%s'", pattern)
     end
 
-    local pattern = table.concat(parts, "")
-
-    return collect(bufnr, viewport, pattern), pattern
+    return collect(bufnr, viewport, vim.regex(pattern)), pattern
   end
 
   ---@param bufnr integer
@@ -84,21 +73,19 @@ do
   ---@param chars string @ascii only by design
   ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.string(bufnr, viewport, chars)
-    local parts = {}
+    local pattern
     do
+      local rope = ropes.new()
+      rope:put([[\M]])
       --&smartcase
-      if string.find(chars, "%u") then
-        table.insert(parts, 1, [[\C]])
-      else
-        table.insert(parts, 1, [[\c]])
-      end
+      rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
+      rope:put(chars)
 
-      table.insert(parts, escaped(chars))
+      pattern = rope:tostring()
+      jelly.debug("pattern='%s'", pattern)
     end
 
-    local pattern = table.concat(parts, "")
-
-    return collect(bufnr, viewport, pattern), pattern
+    return collect(bufnr, viewport, vim.regex(pattern)), pattern
   end
 end
 

@@ -12,7 +12,7 @@ do
     local str = table.concat({
       "asdfjkl;" .. "gh" .. "qwertyuiop" .. "zxcvbnm",
       ",./'[" .. "]1234567890-=",
-      "ASDFJKL" .. "GH" .. "WERTYUIOP" .. "ZXCVBNM",
+      "ASDFJKL" .. "GH" .. "QWERTYUIOP" .. "ZXCVBNM",
     }, "")
     for i = 1, #str do
       local char = string.sub(str, i, i)

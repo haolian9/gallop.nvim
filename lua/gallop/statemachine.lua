@@ -18,6 +18,7 @@ local jelly = require("infra.jellyfish")("gallop.statemachine")
 local jumplist = require("infra.jumplist")
 local prefer = require("infra.prefer")
 local tty = require("infra.tty")
+local wincursor = require("infra.wincursor")
 
 local facts = require("gallop.facts")
 
@@ -99,20 +100,19 @@ end
 ---@param winid integer
 ---@param target gallop.Target
 local function goto_target(winid, target)
+  local cursor = wincursor.position(winid)
+
   local target_col
   if target.carrier == "buf" then
-    local row, col = unpack(api.nvim_win_get_cursor(winid))
-    if target.lnum + 1 == row and target.col_start == col then return end
+    if target.lnum == cursor.lnum and target.col_start == cursor.col then return end
 
     target_col = target.col_start + target.col_offset
   elseif target.carrier == "win" then
-    local cursor = api.nvim_win_get_cursor(winid)
     local byte_col = ctx.win(winid, function() return vim.fn.virtcol2col(winid, target.lnum + 1, target.col_start) - 1 end)
     if byte_col == -1 then -- no enough chars in this line for given screen_col
       target_col = 0
     else
-      if target.lnum + 1 == cursor[1] and cursor[2] == byte_col then return end
-
+      if target.lnum == cursor.lnum and cursor.col == byte_col then return end
       target_col = byte_col + target.col_offset
     end
   else
@@ -121,7 +121,7 @@ local function goto_target(winid, target)
 
   jumplist.push_here()
 
-  api.nvim_win_set_cursor(winid, { target.lnum + 1, target_col })
+  wincursor.go(winid, target.lnum, target_col)
 end
 
 ---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[], string?
