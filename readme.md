@@ -22,7 +22,7 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 
 ## prerequisites
 * linux
-* nvim 0.9.*
+* nvim 0.10.*
 * haolian9/infra.nvim
 
 ## usage
