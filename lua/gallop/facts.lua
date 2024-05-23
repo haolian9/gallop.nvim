@@ -1,7 +1,7 @@
 local M = {}
 
-local fn = require("infra.fn")
 local highlighter = require("infra.highlighter")
+local itertools = require("infra.itertools")
 
 local api = vim.api
 
@@ -23,7 +23,7 @@ do
 
   M.labels = {
     index = function(label) return dict[label] end,
-    iter = function() return fn.iter(list) end,
+    iter = function() return itertools.iter(list) end,
   }
 end
 

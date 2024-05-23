@@ -1,6 +1,6 @@
 local M = {}
 
-local fn = require("infra.fn")
+local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
 
@@ -16,9 +16,9 @@ do
   ---@return gallop.Target[]
   local function collect(bufnr, viewport, target_regex)
     local targets = {}
-    local lineslen = fn.todict(unsafe.linelen_iter(bufnr, fn.range(viewport.start_line, viewport.stop_line)))
+    local lineslen = itertools.todict(unsafe.linelen_iter(bufnr, itertools.range(viewport.start_line, viewport.stop_line)))
 
-    for lnum in fn.range(viewport.start_line, viewport.stop_line) do
+    for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
       local offset = viewport.start_col
       local eol = math.min(viewport.stop_col, lineslen[lnum])
       while offset < eol do
@@ -93,7 +93,7 @@ end
 ---@return gallop.Target[], string? @(targets, pattern-being-used)
 function M.line_head(viewport)
   local targets = {}
-  for lnum in fn.range(viewport.start_line, viewport.stop_line) do
+  for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
     table.insert(targets, { lnum = lnum, col_start = 0, col_stop = 1, carrier = "buf", col_offset = 0 })
   end
   return targets, nil
@@ -108,7 +108,7 @@ function M.cursorcolumn(viewport, screen_col)
   local stop = screen_col + 1
 
   local targets = {}
-  for lnum in fn.range(viewport.start_line, viewport.stop_line) do
+  for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
     table.insert(targets, { lnum = lnum, col_start = start, col_stop = stop, carrier = "win", col_offset = offset })
   end
   return targets, nil
