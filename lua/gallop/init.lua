@@ -116,7 +116,8 @@ end
 function M.cursorcolumn()
   statemachine(function(winid, bufnr, viewport)
     local _ = bufnr
-    local screen_col = ctx.win(winid, function() return vim.fn.virtcol(".") end)
+    ---@diagnostic disable-next-line: redundant-return-value
+    local screen_col = ctx.win(winid, function() return vim.fn.virtcol(".") - viewport.start_col end)
     return target_collectors.cursorcolumn(viewport, screen_col)
   end)
 end
