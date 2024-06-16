@@ -2,8 +2,7 @@ local M = {}
 
 local highlighter = require("infra.highlighter")
 local itertools = require("infra.itertools")
-
-local api = vim.api
+local ni = require("infra.ni")
 
 do
   local list = {}
@@ -28,7 +27,7 @@ do
 end
 
 do
-  M.label_ns = api.nvim_create_namespace("gallop.labels")
+  M.label_ns = ni.create_namespace("gallop.labels")
   do
     local hi = highlighter(0)
     if vim.go.background == "light" then

@@ -16,6 +16,7 @@ local ctx = require("infra.ctx")
 local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("gallop.statemachine")
 local jumplist = require("infra.jumplist")
+local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local tty = require("infra.tty")
 local wincursor = require("infra.wincursor")
@@ -34,8 +35,6 @@ local facts = require("gallop.facts")
 ---@field col_stop  integer @0-indexed, exclusive; anchors to buf or win
 ---@field carrier   'buf'|'win'
 ---@field col_offset integer @by design, 0 for carrier=buf; n for carrier=win
-
-local api = vim.api
 
 ---@param winid integer
 ---@return gallop.Viewport
@@ -65,12 +64,12 @@ local function place_labels(bufnr, targets)
     local label = label_iter()
     if label == nil then return jelly.warn("ran out of labels: %d", #targets - k) end
     if target.carrier == "buf" then
-      api.nvim_buf_set_extmark(bufnr, facts.label_ns, target.lnum, target.col_start, {
+      ni.buf_set_extmark(bufnr, facts.label_ns, target.lnum, target.col_start, {
         virt_text = { { label, "GallopStop" } },
         virt_text_pos = "overlay",
       })
     elseif target.carrier == "win" then
-      api.nvim_buf_set_extmark(bufnr, facts.label_ns, target.lnum, 0, {
+      ni.buf_set_extmark(bufnr, facts.label_ns, target.lnum, 0, {
         virt_text = { { label, "GallopStop" } },
         virt_text_win_col = target.col_start - 1, -- dont know why, but -1 is necessary
       })
@@ -82,7 +81,7 @@ end
 
 ---@param bufnr integer
 ---@param viewport gallop.Viewport
-local function clear_labels(bufnr, viewport) api.nvim_buf_clear_namespace(bufnr, facts.label_ns, viewport.start_line, viewport.stop_line) end
+local function clear_labels(bufnr, viewport) ni.buf_clear_namespace(bufnr, facts.label_ns, viewport.start_line, viewport.stop_line) end
 
 ---@param targets gallop.Target[]
 ---@param label string
@@ -126,8 +125,8 @@ end
 
 ---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[], string?
 return function(collect_target)
-  local winid = api.nvim_get_current_win()
-  local bufnr = api.nvim_win_get_buf(winid)
+  local winid = ni.get_current_win()
+  local bufnr = ni.win_get_buf(winid)
 
   local viewport = resolve_viewport(winid)
   local targets, pattern = collect_target(winid, bufnr, viewport)
