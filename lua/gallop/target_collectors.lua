@@ -45,47 +45,53 @@ do
     return targets
   end
 
-  ---@param bufnr integer
-  ---@param viewport gallop.Viewport
-  ---@param chars string @ascii only by design
-  ---@return gallop.Target[], string? @(targets, pattern-being-used)
-  function M.word_head(bufnr, viewport, chars)
-    local pattern
-    do
-      local rope = ropes.new()
-      rope:put([[\M]])
-      --&smartcase
-      rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
-      --word bound
-      local c0 = string.byte(string.sub(chars, 1, 1))
-      if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then rope:put([[\<]]) end
-      rope:put(chars)
+  do
+    local rope = ropes.new()
 
-      pattern = rope:get()
-      jelly.debug("pattern='%s'", pattern)
+    ---@param bufnr integer
+    ---@param viewport gallop.Viewport
+    ---@param chars string @ascii only by design
+    ---@return gallop.Target[], string? @(targets, pattern-being-used)
+    function M.word_head(bufnr, viewport, chars)
+      local pattern
+      do
+        rope:put([[\M]])
+        --&smartcase
+        rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
+        --word bound
+        local c0 = string.byte(string.sub(chars, 1, 1))
+        if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then rope:put([[\<]]) end
+        rope:put(chars)
+
+        pattern = rope:get()
+        jelly.debug("pattern='%s'", pattern)
+      end
+
+      return collect(bufnr, viewport, vim.regex(pattern)), pattern
     end
-
-    return collect(bufnr, viewport, vim.regex(pattern)), pattern
   end
 
-  ---@param bufnr integer
-  ---@param viewport gallop.Viewport
-  ---@param chars string @ascii only by design
-  ---@return gallop.Target[], string? @(targets, pattern-being-used)
-  function M.string(bufnr, viewport, chars)
-    local pattern
-    do
-      local rope = ropes.new()
-      rope:put([[\M]])
-      --&smartcase
-      rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
-      rope:put(chars)
+  do
+    local rope = ropes.new()
 
-      pattern = rope:get()
-      jelly.debug("pattern='%s'", pattern)
+    ---@param bufnr integer
+    ---@param viewport gallop.Viewport
+    ---@param chars string @ascii only by design
+    ---@return gallop.Target[], string? @(targets, pattern-being-used)
+    function M.string(bufnr, viewport, chars)
+      local pattern
+      do
+        rope:put([[\M]])
+        --&smartcase
+        rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
+        rope:put(chars)
+
+        pattern = rope:get()
+        jelly.debug("pattern='%s'", pattern)
+      end
+
+      return collect(bufnr, viewport, vim.regex(pattern)), pattern
     end
-
-    return collect(bufnr, viewport, vim.regex(pattern)), pattern
   end
 end
 
