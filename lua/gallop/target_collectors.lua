@@ -1,5 +1,6 @@
 local M = {}
 
+local ascii = require("infra.ascii")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
@@ -59,8 +60,7 @@ do
         --&smartcase
         rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
         --word bound
-        local c0 = string.byte(string.sub(chars, 1, 1))
-        if (c0 >= 97 and c0 <= 122) or (c0 >= 65 and c0 <= 90) then rope:put([[\<]]) end
+        if ascii.is_letter(string.sub(chars, 1, 1)) then rope:put([[\<]]) end
         rope:put(chars)
 
         pattern = rope:get()
