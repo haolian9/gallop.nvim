@@ -8,7 +8,7 @@ local ropes = require("string.buffer")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
-  local advance_matcher = vim.regex([[\v^[^a-zA-Z0-9_]+]])
+  local advance_matcher = vim.regex([[\v^[a-zA-Z0-9_]+]])
 
   ---@param bufnr number
   ---@param viewport gallop.Viewport
