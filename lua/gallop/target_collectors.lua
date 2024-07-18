@@ -1,11 +1,11 @@
 local M = {}
 
+local ropes = require("string.buffer")
+
 local ascii = require("infra.ascii")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
-
-local ropes = require("string.buffer")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
