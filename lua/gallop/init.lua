@@ -19,7 +19,7 @@ local jelly = require("infra.jellyfish")("gallop")
 local repeats = require("infra.repeats")
 local tty = require("infra.tty")
 
-local statemachine = require("gallop.statemachine")
+local Gallop = require("gallop.Gallop")
 local target_collectors = require("gallop.target_collectors")
 
 do
@@ -71,7 +71,7 @@ do
     local pattern
 
     ---@diagnostic disable-next-line: unused-local
-    statemachine(function(winid, bufnr, viewport)
+    Gallop(function(winid, bufnr, viewport)
       local targets
       targets, pattern = target_collectors.word_head(bufnr, viewport, chars)
       return targets, pattern
@@ -96,7 +96,7 @@ do
     local pattern
 
     ---@diagnostic disable-next-line: unused-local
-    statemachine(function(winid, bufnr, viewport)
+    Gallop(function(winid, bufnr, viewport)
       local targets
       targets, pattern = target_collectors.string(bufnr, viewport, chars)
       return targets, pattern
@@ -110,11 +110,11 @@ end
 
 function M.lines()
   ---@diagnostic disable-next-line: unused-local
-  statemachine(function(winid, bufnr, viewport) return target_collectors.line_head(viewport) end)
+  Gallop(function(winid, bufnr, viewport) return target_collectors.line_head(viewport) end)
 end
 
 function M.cursorcolumn()
-  statemachine(function(winid, bufnr, viewport)
+  Gallop(function(winid, bufnr, viewport)
     local _ = bufnr
     ---@diagnostic disable-next-line: redundant-return-value
     local screen_col = ctx.win(winid, function() return vim.fn.virtcol(".") - viewport.start_col end)
