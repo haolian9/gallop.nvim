@@ -11,6 +11,7 @@ https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8
 * no caching collected targets
 * respect jumplist
 * limited support repeat via `,` and `;`
+* 支持自然码双拼
 
 ## limits, undefined behaviors
 * it does not work in neovide/nvim-qt due to tty:read()
@@ -36,11 +37,18 @@ do --repeats
 end
 
 do --gallop
-  local last_chars
-  m({ "n", "x" }, "s",   function() last_chars = require("gallop").words(2, last_chars, true) or last_chars end)
-  m({ "n", "x" }, [[\]], function() last_chars = require("gallop").strings(2, last_chars, true) or last_chars end)
-  m({ "n", "x" }, "gl",  function() require("gallop").lines() end)
-  m({ "n", "x" }, "go",  function() require("gallop").cursorcolumn() end)
+  do
+    local last_chars
+    m({ "n", "x" }, "s", function() last_chars = require("gallop").words(2, last_chars, true) or last_chars end)
+  end
+
+  do
+    local last_chars
+    m({ "n", "x" }, "S", function() last_chars = require("gallop").strings(9, last_chars, true) or last_chars end)
+  end
+
+  m({ "n", "x" }, "gl", function() require("gallop").lines() end)
+  m({ "n", "x" }, "go", function() require("gallop").cursorcolumn() end)
 
   m.o("s", "<cmd>lua require'gallop'.strings(2)<cr>")
 end
