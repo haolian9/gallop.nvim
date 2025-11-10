@@ -14,7 +14,7 @@
 
 local ctx = require("infra.ctx")
 local ex = require("infra.ex")
-local jelly = require("infra.jellyfish")("gallop.statemachine")
+local jelly = require("infra.jellyfish")("gallop")
 local jumplist = require("infra.jumplist")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")

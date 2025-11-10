@@ -7,11 +7,8 @@ local ascii = require("infra.ascii")
 local buflines = require("infra.buflines")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
-local logging = require("infra.logging")
 local unsafe = require("infra.unsafe")
 local utf8 = require("infra.utf8")
-
-local log = logging.newlogger("gallop.target_collectors", "info")
 
 local facts = require("gallop.facts")
 
@@ -148,30 +145,40 @@ do
     return map
   end
 
-  local function get_visible_line(bufnr, lnum, col_start, col_stop)
+  ---@param bufnr integer
+  ---@param lnum integer
+  ---@param viewport gallop.Viewport
+  ---@return string[]
+  local function get_visible_line_runes(bufnr, lnum, viewport)
     --todo: *perf* do it in c/zig realm
-    --todo: batch
-    --todo: partial rune
-    local max_cells = col_stop - col_start
-    local stop = col_start + (col_stop - col_start) * 3 --assume all for utf8 runes
-    local line = assert(buflines.partial_line(bufnr, lnum, col_start, stop))
-    log.debug("visible max_cells=%s line=[%s]", max_cells, line)
-    local cell_count, byte_count = 0, 0
-    for char in utf8.iterate(line) do
-      byte_count = byte_count + #char
+
+    --WONTFIX: the line starts with broken utf8 rune
+    assert(viewport.start_col == 0, "viewport has done some `zl`")
+
+    local line
+    do --assume all are utf8 runes in this line
+      local stop = viewport.start_col + (viewport.stop_col - viewport.start_col) * 3
+      line = assert(buflines.partial_line(bufnr, lnum, viewport.start_col, stop))
+    end
+
+    local runes = {}
+    --ascii char takes one cell, utf8 rune takes two
+    local max_cells = viewport.stop_col - viewport.start_col
+    local cell_count = 0
+    for char in utf8.iterate(line, true) do
+      table.insert(runes, char)
       local step = #char > 1 and 2 or 1
       cell_count = cell_count + step
       if cell_count == max_cells then break end
       if cell_count > max_cells then
         cell_count = cell_count - step
-        byte_count = byte_count - #char
+        table.remove(runes)
         break
       end
     end
     assert(cell_count <= max_cells)
-    log.debug("cell-count=%s slice-bytes=%s", cell_count, byte_count)
 
-    return line:sub(1, byte_count)
+    return runes
   end
 
   ---@param bufnr integer
@@ -180,22 +187,18 @@ do
   ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.shuangpin(bufnr, viewport, chars) --
     assert(chars:match("^[a-z][a-z]$"), "invalid shuangpin")
-
-    local targets = {}
+    assert(viewport.start_col == 0, "viewport has done some `zl`")
 
     local rune_to_shuangpins = get_rune_shuangpin_map()
+    local targets = {}
 
     --todo: *perf* 当前以字匹配字码，如果以字码找字会不会更快?
-    --todo: *perf* 缓存？
-
-    log.debug("viewport line=[%s,%s) col=[%s,%s)", viewport.start_line, viewport.stop_line, viewport.start_col, viewport.stop_col)
-
+    --todo: batch
     for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
-      local line = assert(get_visible_line(bufnr, lnum, viewport.start_col, viewport.stop_col))
+      local runes = get_visible_line_runes(bufnr, lnum, viewport)
       local offset = viewport.start_col
-      log.debug("scanning line=%s [%s]", lnum, line)
 
-      for rune in utf8.iterate(line, true) do
+      for _, rune in ipairs(runes) do
         local col_start = offset
         local col_stop = col_start + #rune
         offset = offset + #rune
@@ -206,8 +209,6 @@ do
         end
       end
     end
-
-    jelly.debug("码: %s, matches: %s", chars, targets)
 
     return targets, chars
   end
