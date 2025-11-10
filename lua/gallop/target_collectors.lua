@@ -1,11 +1,16 @@
 local M = {}
 
 local ropes = require("string.buffer")
+local new_table = require("table.new")
 
 local ascii = require("infra.ascii")
+local buflines = require("infra.buflines")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
 local unsafe = require("infra.unsafe")
+local utf8 = require("infra.utf8")
+
+local facts = require("gallop.facts")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
@@ -118,6 +123,63 @@ function M.cursorcolumn(viewport, screen_col)
     table.insert(targets, { lnum = lnum, col_start = start, col_stop = stop, carrier = "win", col_offset = offset })
   end
   return targets, nil
+end
+
+do
+  ---credits: the shuangpin data is generated from https://github.com/mozillazg/pinyin-data/blob/v0.15.0/pinyin.txt
+
+  local map
+
+  ---@return {string: {string: true}}
+  local function get_rune_shuangpin_map()
+    if map then return map end
+
+    map = new_table(50562, 0) --`$ wc -l data/shuangpin.data`
+    --todo: memory expiration
+    for line in io.lines(facts.shuangpin_file) do
+      local pin = line:sub(1, #"ab")
+      local rune = line:sub(#"ab " + 1)
+      if map[rune] == nil then map[rune] = {} end
+      map[rune][pin] = true
+    end
+    return map
+  end
+
+  ---@param bufnr integer
+  ---@param viewport gallop.Viewport
+  ---@param chars string @ascii only by design
+  ---@return gallop.Target[], string? @(targets, pattern-being-used)
+  function M.shuangpin(bufnr, viewport, chars) --
+    assert(chars:match("^[a-z][a-z]$"), "invalid shuangpin")
+
+    local targets = {}
+
+    local rune_to_shuangpins = get_rune_shuangpin_map()
+
+    --todo: perf。当前以字匹配字码，如果以字码找字会不会更快?
+    --todo: perf。缓存？
+
+    for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
+      --todo: buflines batch
+      --todo: what if partial rune?
+      local line = assert(buflines.partial_line(bufnr, lnum, viewport.start_col, viewport.stop_col))
+      local offset = viewport.start_col
+      for rune in utf8.iterate(line) do
+        local col_start = offset
+        local col_stop = col_start + #rune
+        offset = offset + #rune
+
+        local pins = rune_to_shuangpins[rune]
+        if pins and pins[chars] then --
+          table.insert(targets, { lnum = lnum, col_start = col_start, col_stop = col_stop, carrier = "buf", col_offset = 0 })
+        end
+      end
+    end
+
+    jelly.debug("码: %s, matches: %s", chars, targets)
+
+    return targets, chars
+  end
 end
 
 return M

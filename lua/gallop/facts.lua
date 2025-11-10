@@ -1,8 +1,15 @@
 local M = {}
 
+local fs = require("infra.fs")
 local highlighter = require("infra.highlighter")
 local itertools = require("infra.itertools")
 local ni = require("infra.ni")
+local resolve_plugin_root = require("infra.resolve_plugin_root")
+
+do
+  local root = resolve_plugin_root("gallop", "facts.lua")
+  M.shuangpin_file = fs.joinpath(root, "lua", "gallop", "data", "shuangpin.data")
+end
 
 do
   local list = {}

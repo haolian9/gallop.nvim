@@ -106,6 +106,30 @@ do
 
     return chars
   end
+
+  ---@param spare_chars? string @ascii chars
+  ---@param enable_repeat? boolean @nil=false
+  ---@return string? chars @nil if error occurs
+  function M.shuangpin(spare_chars, enable_repeat)
+    if enable_repeat == nil then enable_repeat = false end
+
+    local chars = await_input_chars(2, spare_chars)
+    if chars == nil then return end
+    if #chars ~= 2 then return jelly.warn("双拼!") end
+
+    local pattern
+
+    Gallop(function(_, bufnr, viewport)
+      local targets
+      targets, pattern = target_collectors.shuangpin(bufnr, viewport, chars)
+      return targets, pattern
+    end)
+
+    --todo: honor enable_repeat
+    -- if enable_repeat then end
+
+    return chars
+  end
 end
 
 function M.lines()
