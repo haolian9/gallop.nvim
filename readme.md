@@ -44,7 +44,7 @@ do --gallop
 
   do
     local last_chars
-    m({ "n", "x" }, "S", function() last_chars = require("gallop").strings(9, last_chars, true) or last_chars end)
+    m({ "n", "x" }, "S", function() last_chars = require("gallop").shuangpin(last_chars, true) or last_chars end)
   end
 
   m({ "n", "x" }, "gl", function() require("gallop").lines() end)
