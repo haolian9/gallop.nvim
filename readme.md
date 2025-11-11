@@ -2,6 +2,8 @@ an opinionated jump motion implementation
 
 https://user-images.githubusercontent.com/6236829/238657940-b8c6fc48-49d0-4337-8ac9-8066b6274f63.mp4
 
+https://github.com/user-attachments/assets/9027ecd4-6c2f-40d5-a6c6-900009ae09d3
+
 ## design choices
 * be minimal: no callback, no back-forth, no {treesitter,lsp}-backed
 * only for the viewport of currently window
