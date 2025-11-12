@@ -1,3 +1,5 @@
+local M = {}
+
 -- design choices
 -- * only for the the visible region of currently window
 -- * every label a printable ascii char
@@ -13,7 +15,6 @@
 --
 
 local ctx = require("infra.ctx")
-local ex = require("infra.ex")
 local jelly = require("infra.jellyfish")("gallop")
 local jumplist = require("infra.jumplist")
 local ni = require("infra.ni")
@@ -98,7 +99,7 @@ end
 
 ---@param winid integer
 ---@param target gallop.Target
-local function goto_target(winid, target)
+function M.goto_target(winid, target)
   local cursor = wincursor.position(winid)
 
   local target_col
@@ -124,7 +125,7 @@ local function goto_target(winid, target)
 end
 
 ---@param collect_target fun(winid: integer, bufnr: integer, viewport: gallop.Viewport): gallop.Target[], string?
-return function(collect_target)
+function M.new(collect_target)
   local winid = ni.get_current_win()
   local bufnr = ni.win_get_buf(winid)
 
@@ -132,10 +133,10 @@ return function(collect_target)
   local targets, pattern = collect_target(winid, bufnr, viewport)
 
   if #targets == 0 then return jelly.info("no target found using pattern=%s", pattern) end
-  if #targets == 1 then return goto_target(winid, targets[1]) end
+  if #targets == 1 then return M.goto_target(winid, targets[1]) end
 
   place_labels(bufnr, targets)
-  ex("redraw")
+  ni.x.redraw({ win = winid, valid = true, flush = true })
 
   local ok, err = pcall(function()
     -- keep asking user for a valid label
@@ -144,9 +145,11 @@ return function(collect_target)
       if chosen_label == "" then return jelly.info("chose no label") end
       local target = label_to_target(targets, chosen_label)
       -- can not redraw here, since showing message in cmdline will move the cursor and wait an `<enter>`
-      if target ~= nil then return goto_target(winid, target) end
+      if target ~= nil then return M.goto_target(winid, target) end
     end
   end)
   clear_labels(bufnr, viewport)
   if not ok then error(err) end
 end
+
+return M
