@@ -169,7 +169,8 @@ do
     for char in utf8.iterate(line, true) do
       table.insert(runes, char)
       local step = #char > 1 and 2 or 1
-      --todo: tab may takes more; &tabstop
+      --todo: tab may takes more cell; &tabstop
+      --todo: setcellwidths() also
       --todo: step = nvim_strwidth(char) or fn.strdisplaywidth(char)
       cell_count = cell_count + step
       if cell_count == max_cells then break end
