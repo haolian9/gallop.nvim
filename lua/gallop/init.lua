@@ -158,7 +158,6 @@ do
       return targets, pattern
     end)
 
-    --todo: honor enable_repeat
     if enable_repeat and #targets > 1 then remember_charsearch(ni.get_current_win(), targets) end
 
     return chars

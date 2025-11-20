@@ -7,10 +7,13 @@ local ascii = require("infra.ascii")
 local buflines = require("infra.buflines")
 local itertools = require("infra.itertools")
 local jelly = require("infra.jellyfish")("gallop.target_collectors", "info")
+local logging = require("infra.logging")
 local unsafe = require("infra.unsafe")
 local utf8 = require("infra.utf8")
 
 local facts = require("gallop.facts")
+
+local log = logging.newlogger("gallop.target_collectors", "info")
 
 do
   -- for advancing the offset if the rest of a line starts with these chars
@@ -149,40 +152,59 @@ do
   ---@param bufnr integer
   ---@param lnum integer
   ---@param viewport gallop.Viewport
-  ---@return string[]
+  ---@return integer start_col_offset 0-based, for viewport.start_col
+  ---@return string[] runes
   local function get_visible_line_runes(bufnr, lnum, viewport)
     --todo: *perf* do it in c to avoid string copying
 
-    --WONTFIX: the line starts with broken utf8 rune
-    assert(viewport.start_col == 0, "viewport has done some `zl`")
-
     local line
-    do --assume all are utf8 runes in this line
-      local stop = viewport.start_col + (viewport.stop_col - viewport.start_col) * 3
-      line = assert(buflines.partial_line(bufnr, lnum, viewport.start_col, stop))
+    do
+      ---view.start_col stands for the number of cells scrolled for utf8 rune filled line
+      ---rather than byte offset,
+      local start = 0
+      --assume all are utf8 runes in this line
+      local stop = 0
+      stop = stop + viewport.start_col * 3 --scrolled length
+      stop = stop + (viewport.stop_col - viewport.start_col) * 3 --current screen
+
+      line = assert(buflines.partial_line(bufnr, lnum, start, stop))
+      log.debug("line #%s [%s]", #line, line)
+    end
+
+    local iter = utf8.iterate(line, 1, false)
+
+    local skipped_bytes = 0
+    do --skip scrolled cells
+      local scrolled_cell_remain = viewport.start_col
+      for _ = 1, viewport.start_col do
+        local char = iter()
+        if char == nil then goto continue end
+        skipped_bytes = skipped_bytes + #char
+        local step = #char > 1 and 2 or 1
+        scrolled_cell_remain = scrolled_cell_remain - step
+        if scrolled_cell_remain < 1 then break end
+        ::continue::
+      end
     end
 
     local runes = {}
-    --ascii char takes one cell, utf8 rune takes two. accroding to fn.strdisplaywidth()
-    local max_cells = viewport.stop_col - viewport.start_col
-    local cell_count = 0
-    for char in utf8.iterate(line, true) do
-      table.insert(runes, char)
-      local step = #char > 1 and 2 or 1
-      --todo: tab may takes more cell; &tabstop
-      --todo: setcellwidths() also
-      --todo: step = nvim_strwidth(char) or fn.strdisplaywidth(char)
-      cell_count = cell_count + step
-      if cell_count == max_cells then break end
-      if cell_count > max_cells then
-        cell_count = cell_count - step
-        table.remove(runes)
-        break
+    do
+      --ascii char takes one cell, utf8 rune takes two
+      local max_cells = viewport.stop_col - viewport.start_col
+      log.debug("viewport=%s line_soffset=%s max_cells=%s", viewport, line_soffset, max_cells)
+      local cell_count = 0
+      for char in iter do
+        table.insert(runes, char)
+        --todo: tab may takes more cell; &tabstop; setcellwidths() also
+        --      * tried nvim_strwidth(char), which makes no difference in my test.
+        local step = #char > 1 and 2 or 1
+        cell_count = cell_count + step
+        if cell_count >= max_cells then break end
       end
+      log.debug("runes #%s %s", #runes, runes)
     end
-    assert(cell_count <= max_cells)
 
-    return runes
+    return skipped_bytes - viewport.start_col, runes
   end
 
   function M.report_shuangpin_data_stats()
@@ -201,15 +223,14 @@ do
   ---@return gallop.Target[], string? @(targets, pattern-being-used)
   function M.shuangpin(bufnr, viewport, chars) --
     assert(chars:match("^[a-z][a-z]$"), "invalid shuangpin")
-    assert(viewport.start_col == 0, "viewport has done some `zl`")
 
     local rune_to_shuangpins = get_rune_shuangpin_map()
     local targets = {}
 
     --todo: batch get lines
     for lnum in itertools.range(viewport.start_line, viewport.stop_line) do
-      local runes = get_visible_line_runes(bufnr, lnum, viewport)
-      local offset = viewport.start_col
+      local start_col_offset, runes = get_visible_line_runes(bufnr, lnum, viewport)
+      local offset = viewport.start_col + start_col_offset
 
       for _, rune in ipairs(runes) do
         local col_start = offset
