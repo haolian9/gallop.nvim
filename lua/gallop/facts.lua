@@ -33,15 +33,14 @@ do
   }
 end
 
+M.label_ns = ni.create_namespace("gallop.labels")
+
 do
-  M.label_ns = ni.create_namespace("gallop.labels")
-  do
-    local hi = highlighter(0)
-    if vim.go.background == "light" then
-      hi("GallopStop", { fg = 15, bg = 8, bold = true })
-    else
-      hi("GallopStop", { fg = 8, bg = 15, bold = true })
-    end
+  local hi = highlighter(0)
+  if vim.go.background == "light" then
+    hi("GallopStop", { fg = 15, bg = 8, bold = true })
+  else
+    hi("GallopStop", { fg = 8, bg = 15, bold = true })
   end
 end
 
