@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/9027ecd4-6c2f-40d5-a6c6-900009ae09d3
 * no caching collected targets
 * respect jumplist
 * limited support repeat via `,` and `;`
-* 支持自然码双拼
+* 支持自然码双拼定位汉字
 
 ## limits, undefined behaviors
 * it does not work in neovide/nvim-qt due to tty:read()
@@ -21,11 +21,12 @@ https://github.com/user-attachments/assets/9027ecd4-6c2f-40d5-a6c6-900009ae09d3
 
 ## status
 * just works
+* coner cases should be found
 * feature-complete
 
 ## prerequisites
 * linux
-* nvim 0.10.*
+* nvim 0.11.*
 * haolian9/infra.nvim
 
 ## usage
