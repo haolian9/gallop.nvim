@@ -55,7 +55,7 @@ do
   end
 
   do
-    local rope = ropes.new()
+    local rope = ropes.new(32)
 
     ---@param bufnr integer
     ---@param viewport gallop.Viewport
@@ -68,7 +68,7 @@ do
         --&smartcase
         rope:put(string.find(chars, "%u") and [[\C]] or [[\c]])
         --word bound
-        if ascii.is_letter(string.sub(chars, 1, 1)) then rope:put([[\<]]) end
+        if string.find(chars, "^%a") then rope:put([[\<]]) end
         rope:put(chars)
 
         pattern = rope:get()
@@ -80,7 +80,7 @@ do
   end
 
   do
-    local rope = ropes.new()
+    local rope = ropes.new(32)
 
     ---@param bufnr integer
     ---@param viewport gallop.Viewport
