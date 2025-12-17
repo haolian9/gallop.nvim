@@ -17,6 +17,7 @@ local M = {}
 local ctx = require("infra.ctx")
 local jelly = require("infra.jellyfish")("gallop")
 local jumplist = require("infra.jumplist")
+local mi = require("infra.mi")
 local ni = require("infra.ni")
 local prefer = require("infra.prefer")
 local tty = require("infra.tty")
@@ -135,8 +136,9 @@ function M.new(collect_target)
   if #targets == 0 then return jelly.info("no target found using pattern=%s", pattern) end
   if #targets == 1 then return M.goto_target(winid, targets[1]) end
 
+  ni.x.ns_set(facts.label_ns, { wins = { winid } })
   place_labels(bufnr, targets)
-  ni.x.redraw({ win = winid, valid = true, flush = true })
+  mi.redraw_win(winid)
 
   local ok, err = pcall(function()
     -- keep asking user for a valid label
